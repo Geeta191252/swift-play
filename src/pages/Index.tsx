@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import SplashScreen from "@/components/SplashScreen";
+import gameLogo from "@/assets/game-logo.jpg";
 
 const Index = () => {
   const [phase, setPhase] = useState<"preload" | "splash" | "ready">("preload");
@@ -60,10 +61,8 @@ const Index = () => {
             className="flex min-h-screen items-center justify-center"
           >
             <div className="text-center px-6">
-              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-foreground">
-                <span className="font-game text-3xl text-background">G</span>
-              </div>
-              <h1 className="font-game text-2xl text-foreground mb-2">GAMEE</h1>
+              <img src={gameLogo} alt="Greedy King" className="mx-auto mb-4 h-20 w-20 rounded-2xl shadow-lg object-cover" />
+              <h1 className="font-game text-2xl text-foreground mb-2">Greedy King</h1>
               <p className="text-sm text-muted-foreground">Welcome to the game!</p>
             </div>
           </motion.div>
