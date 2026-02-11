@@ -550,9 +550,10 @@ const GreedyKingGame = () => {
               {(() => {
                 // Build leaderboard: fake players + user
                 const userTotalBet = userBets.reduce((a, b) => a + b, 0);
-                const leaderboard = DOLLAR_PLAYERS.slice(0, 3).concat(STAR_PLAYERS.slice(0, 2)).map((name, i) => ({
+                const walletPlayers = activeWallet === "dollar" ? DOLLAR_PLAYERS : STAR_PLAYERS;
+                const leaderboard = walletPlayers.slice(0, 5).map((name) => ({
                   name,
-                  wallet: i % 2 === 0 ? "dollar" as const : "star" as const,
+                  wallet: activeWallet,
                   amount: Math.floor(Math.random() * 500) + 50,
                 }));
                 leaderboard.push({
