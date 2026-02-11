@@ -29,6 +29,7 @@ const GreedyKingGame = () => {
   const [dollarBalance, setDollarBalance] = useState(7575);
   const [starBalance, setStarBalance] = useState(3200);
   const [todayProfits, setTodayProfits] = useState(0);
+  const [activeWallet, setActiveWallet] = useState<"dollar" | "star">("dollar");
   const [selectedBet, setSelectedBet] = useState(10);
   const [userBets, setUserBets] = useState<number[]>(() => FOOD_ITEMS.map(() => 0));
   const [phase, setPhase] = useState<GamePhase>("betting");
@@ -125,7 +126,11 @@ const GreedyKingGame = () => {
           const netProfit = amount - lostOnOthers;
           setWinAmount(amount);
           setTotalLost(lostOnOthers);
-          setDollarBalance(g => g + amount);
+          if (activeWallet === "dollar") {
+            setDollarBalance(g => g + amount);
+          } else {
+            setStarBalance(g => g + amount);
+          }
           setTodayProfits(p => p + netProfit);
         } else {
           setWinAmount(0);
@@ -159,8 +164,13 @@ const GreedyKingGame = () => {
 
   const betOnFruitClick = (fruitIndex: number) => {
     if (phase !== "betting") return;
-    if (dollarBalance < selectedBet) return;
-    setDollarBalance(prev => prev - selectedBet);
+    const currentBalance = activeWallet === "dollar" ? dollarBalance : starBalance;
+    if (currentBalance < selectedBet) return;
+    if (activeWallet === "dollar") {
+      setDollarBalance(prev => prev - selectedBet);
+    } else {
+      setStarBalance(prev => prev - selectedBet);
+    }
     setUserBets(prev => {
       const copy = [...prev];
       copy[fruitIndex] += selectedBet;
@@ -222,7 +232,8 @@ const GreedyKingGame = () => {
               const y = 150 + r * Math.sin(angle);
               const myBet = userBets[i];
               const hasBetOnThis = myBet > 0;
-              const canBet = phase === "betting" && dollarBalance >= selectedBet;
+              const currentBal = activeWallet === "dollar" ? dollarBalance : starBalance;
+              const canBet = phase === "betting" && currentBal >= selectedBet;
 
               return (
                 <div key={i} className="absolute flex flex-col items-center"
@@ -366,17 +377,35 @@ const GreedyKingGame = () => {
           })}
         </div>
 
-        {/* Wallets: $ and ⭐ */}
-        <div className="w-full flex gap-2 mt-3">
-          <div className="flex-1 rounded-full px-3 py-2.5 flex items-center justify-center gap-1.5" style={{ background: "hsla(0, 0%, 100%, 0.9)" }}>
-            <span className="text-[10px] font-semibold" style={{ color: "hsl(0, 0%, 45%)" }}>Balance</span>
-            <span className="text-base">💲</span>
-            <span className="font-bold text-sm" style={{ color: "hsl(0, 0%, 15%)" }}>{dollarBalance.toLocaleString()}</span>
-          </div>
-          <div className="flex-1 rounded-full px-3 py-2.5 flex items-center justify-center gap-1.5" style={{ background: "hsla(0, 0%, 100%, 0.9)" }}>
+        {/* Wallet with toggle */}
+        <div className="w-full flex gap-2 mt-3 items-center">
+          <div className="flex-1 rounded-full px-3 py-2.5 flex items-center justify-center gap-1.5 border-2"
+            style={{
+              background: "hsla(0, 0%, 100%, 0.9)",
+              borderColor: activeWallet === "star" ? "hsl(45, 90%, 50%)" : "transparent",
+            }}>
             <span className="text-[10px] font-semibold" style={{ color: "hsl(0, 0%, 45%)" }}>Stars</span>
             <span className="text-base">⭐</span>
             <span className="font-bold text-sm" style={{ color: "hsl(45, 90%, 45%)" }}>{starBalance.toLocaleString()}</span>
+          </div>
+          <button
+            onClick={() => setActiveWallet(prev => prev === "dollar" ? "star" : "dollar")}
+            className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 border-2 transition-all active:scale-90"
+            style={{
+              background: "hsla(0, 0%, 100%, 0.95)",
+              borderColor: "hsl(45, 80%, 55%)",
+            }}
+          >
+            <span className="text-xs">🔄</span>
+          </button>
+          <div className="flex-1 rounded-full px-3 py-2.5 flex items-center justify-center gap-1.5 border-2"
+            style={{
+              background: "hsla(0, 0%, 100%, 0.9)",
+              borderColor: activeWallet === "dollar" ? "hsl(140, 60%, 45%)" : "transparent",
+            }}>
+            <span className="text-[10px] font-semibold" style={{ color: "hsl(0, 0%, 45%)" }}>Balance</span>
+            <span className="text-base">💲</span>
+            <span className="font-bold text-sm" style={{ color: "hsl(0, 0%, 15%)" }}>{dollarBalance.toLocaleString()}</span>
           </div>
         </div>
 
