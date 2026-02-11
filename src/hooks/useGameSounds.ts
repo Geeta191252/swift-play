@@ -52,3 +52,57 @@ export const playResultReveal = () => {
   playTone(880, 0.15, "sine", 0.2);
   setTimeout(() => playTone(1100, 0.2, "sine", 0.25), 100);
 };
+
+// Background music - casino/game looping melody
+let bgOscs: OscillatorNode[] = [];
+let bgGain: GainNode | null = null;
+let bgPlaying = false;
+
+export const startBgMusic = () => {
+  if (bgPlaying) return;
+  const c = getCtx();
+  bgGain = c.createGain();
+  bgGain.gain.value = 0.06;
+  bgGain.connect(c.destination);
+
+  const melody = [
+    262, 330, 392, 330, 349, 294, 262, 294,
+    330, 392, 440, 392, 349, 330, 294, 262,
+  ];
+  const noteLen = 0.4;
+
+  const playLoop = () => {
+    if (!bgPlaying || !bgGain) return;
+    const c = getCtx();
+    melody.forEach((freq, i) => {
+      const osc = c.createOscillator();
+      const g = c.createGain();
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      g.gain.value = 0.06;
+      g.gain.setValueAtTime(0.06, c.currentTime + i * noteLen);
+      g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + (i + 1) * noteLen - 0.02);
+      osc.connect(g).connect(bgGain!);
+      osc.start(c.currentTime + i * noteLen);
+      osc.stop(c.currentTime + (i + 1) * noteLen);
+      bgOscs.push(osc);
+    });
+    // Loop after full melody
+    setTimeout(() => {
+      bgOscs = [];
+      playLoop();
+    }, melody.length * noteLen * 1000);
+  };
+
+  bgPlaying = true;
+  playLoop();
+};
+
+export const stopBgMusic = () => {
+  bgPlaying = false;
+  bgOscs.forEach(o => { try { o.stop(); } catch {} });
+  bgOscs = [];
+  if (bgGain) { bgGain.disconnect(); bgGain = null; }
+};
+
+export const isBgMusicPlaying = () => bgPlaying;
