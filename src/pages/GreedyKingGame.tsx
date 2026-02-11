@@ -17,10 +17,12 @@ const FOOD_ITEMS = [
 
 const BET_OPTIONS = [10, 100, 1000, 10000];
 
-const FAKE_WINNERS = [
-  { name: "Meer", gems: 100, rank: 1 },
-  { name: "Ronnie Hass...", gems: 100, rank: 2 },
-  { name: "Reserved for You", gems: 0, rank: 3 },
+const FAKE_PLAYERS = [
+  { name: "Meer", wallet: "dollar" as const },
+  { name: "Ronnie H.", wallet: "star" as const },
+  { name: "Ali Khan", wallet: "dollar" as const },
+  { name: "Zara M.", wallet: "star" as const },
+  { name: "Hassan", wallet: "dollar" as const },
 ];
 
 type GamePhase = "betting" | "countdown" | "spinning" | "result";
@@ -517,33 +519,50 @@ const GreedyKingGame = () => {
               )}
 
               <div className="flex items-center gap-3 mt-4 mb-3">
-                <div className="flex-1 h-px" style={{ background: "hsl(0, 0%, 85%)" }} />
-                <span className="text-xs" style={{ color: "hsl(0, 0%, 55%)" }}>This round's biggest winner</span>
-                <div className="flex-1 h-px" style={{ background: "hsl(0, 0%, 85%)" }} />
+              <div className="flex-1 h-px" style={{ background: "hsl(0, 0%, 85%)" }} />
+              <span className="text-xs" style={{ color: "hsl(0, 0%, 55%)" }}>Leaderboard - Top Winners</span>
+              <div className="flex-1 h-px" style={{ background: "hsl(0, 0%, 85%)" }} />
               </div>
 
-              <div className="flex items-start justify-center gap-6">
-                {FAKE_WINNERS.map((winner, i) => (
-                  <motion.div key={i} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 + i * 0.15 }} className="flex flex-col items-center">
-                    <div className="relative">
-                      <div className="w-14 h-14 rounded-full flex items-center justify-center" style={{ background: i < 2 ? "hsl(210, 20%, 85%)" : "hsl(0, 0%, 90%)" }}>
-                        {i < 2 ? <span className="text-2xl">👤</span> : <span className="text-xl">🎁</span>}
-                      </div>
-                      <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
-                        style={{ background: i === 0 ? "hsl(50, 90%, 50%)" : i === 1 ? "hsl(210, 60%, 55%)" : "hsl(0, 0%, 70%)" }}>
-                        {winner.rank}
-                      </div>
-                    </div>
-                    <p className="text-xs font-semibold mt-1.5 text-center max-w-[70px] truncate" style={{ color: "hsl(0, 0%, 25%)" }}>{winner.name}</p>
-                    {winner.gems > 0 && (
-                      <div className="flex items-center gap-0.5 mt-0.5">
-                        <Diamond className="h-2.5 w-2.5 text-primary" />
-                        <span className="text-[10px] font-bold" style={{ color: "hsl(35, 90%, 45%)" }}>{winner.gems}</span>
-                      </div>
-                    )}
-                  </motion.div>
-                ))}
-              </div>
+              {(() => {
+                // Build leaderboard: fake players + user
+                const userTotalBet = userBets.reduce((a, b) => a + b, 0);
+                const leaderboard = FAKE_PLAYERS.map(p => ({
+                  name: p.name,
+                  wallet: p.wallet,
+                  amount: Math.floor(Math.random() * 500) + 50,
+                }));
+                leaderboard.push({
+                  name: "You",
+                  wallet: activeWallet,
+                  amount: winAmount > 0 ? winAmount : 0,
+                });
+                leaderboard.sort((a, b) => b.amount - a.amount);
+                const top3 = leaderboard.slice(0, 3);
+
+                return (
+                  <div className="flex items-start justify-center gap-6">
+                    {top3.map((player, i) => (
+                      <motion.div key={i} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 + i * 0.15 }} className="flex flex-col items-center">
+                        <div className="relative">
+                          <div className="w-14 h-14 rounded-full flex items-center justify-center" style={{ background: player.name === "You" ? "hsl(45, 80%, 85%)" : "hsl(210, 20%, 85%)" }}>
+                            <span className="text-2xl">{player.name === "You" ? "🙋" : "👤"}</span>
+                          </div>
+                          <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
+                            style={{ background: i === 0 ? "hsl(50, 90%, 50%)" : i === 1 ? "hsl(210, 60%, 55%)" : "hsl(25, 70%, 55%)" }}>
+                            {i + 1}
+                          </div>
+                        </div>
+                        <p className="text-xs font-semibold mt-1.5 text-center max-w-[70px] truncate" style={{ color: "hsl(0, 0%, 25%)" }}>{player.name}</p>
+                        <div className="flex items-center gap-0.5 mt-0.5">
+                          <span className="text-xs">{player.wallet === "dollar" ? "💲" : "⭐"}</span>
+                          <span className="text-[10px] font-bold" style={{ color: "hsl(35, 90%, 45%)" }}>{player.amount}</span>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                );
+              })()}
             </div>
           </motion.div>
         )}
