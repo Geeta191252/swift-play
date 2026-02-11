@@ -17,20 +17,25 @@ const FOOD_ITEMS = [
 
 const BET_OPTIONS = [10, 100, 1000, 10000];
 
-const FAKE_NAMES = [
-  "Meer", "Ronnie H.", "Ali Khan", "Zara M.", "Hassan", "Guest_fTZaai", "kailash", "Raj",
-  "Guest_ClztlT", "Priya S.", "Amit K.", "Sara J.", "Vikram", "Neha R.", "Rohit P.",
-  "Guest_xK9mL", "Deepak", "Anita M.", "Suresh B.", "Kavita D.", "Guest_pQ7nR",
-  "Manish T.", "Pooja L.", "Arun S.", "Divya K.", "Guest_mN3wX", "Ravi G.",
-  "Sunita P.", "Mukesh J.", "Rekha V.", "Guest_hY2kF", "Sanjay M.", "Nisha A.",
-  "Pankaj R.", "Meena S.", "Guest_tR8vB", "Rajesh K.", "Swati N.", "Vinod L.",
-  "Geeta D.", "Guest_wL5cZ", "Ashok P.", "Lata M.", "Sunil J.", "Kamla R.",
-  "Guest_bN4qW", "Mohan S.", "Usha K.", "Prakash D.", "Shanti V."
+const DOLLAR_PLAYERS = [
+  "Meer", "Ali Khan", "Hassan", "kailash", "Raj", "Amit K.", "Vikram", "Rohit P.",
+  "Deepak", "Suresh B.", "Manish T.", "Arun S.", "Ravi G.", "Mukesh J.", "Sanjay M.",
+  "Pankaj R.", "Rajesh K.", "Vinod L.", "Ashok P.", "Sunil J.", "Mohan S.", "Prakash D.",
+  "Guest_fTZaai", "Guest_ClztlT", "Guest_xK9mL"
+];
+
+const STAR_PLAYERS = [
+  "Ronnie H.", "Zara M.", "Guest_pQ7nR", "Priya S.", "Sara J.", "Neha R.",
+  "Anita M.", "Kavita D.", "Pooja L.", "Divya K.", "Sunita P.", "Rekha V.",
+  "Nisha A.", "Meena S.", "Swati N.", "Geeta D.", "Lata M.", "Kamla R.",
+  "Usha K.", "Shanti V.", "Guest_mN3wX", "Guest_hY2kF", "Guest_tR8vB",
+  "Guest_wL5cZ", "Guest_bN4qW"
 ];
 
 const generateLeaderboard = (walletType: "dollar" | "star") => {
+  const names = walletType === "dollar" ? DOLLAR_PLAYERS : STAR_PLAYERS;
   const seed = walletType === "dollar" ? 1 : 2;
-  return FAKE_NAMES.map((name, i) => {
+  return names.map((name, i) => {
     const base = (i + 1) * seed * 7919;
     const totalGames = 50 + ((base * 31) % 450);
     const totalWins = Math.floor(totalGames * (0.2 + ((base * 17) % 60) / 100));
@@ -545,7 +550,7 @@ const GreedyKingGame = () => {
               {(() => {
                 // Build leaderboard: fake players + user
                 const userTotalBet = userBets.reduce((a, b) => a + b, 0);
-                const leaderboard = FAKE_NAMES.slice(0, 5).map((name, i) => ({
+                const leaderboard = DOLLAR_PLAYERS.slice(0, 3).concat(STAR_PLAYERS.slice(0, 2)).map((name, i) => ({
                   name,
                   wallet: i % 2 === 0 ? "dollar" as const : "star" as const,
                   amount: Math.floor(Math.random() * 500) + 50,
