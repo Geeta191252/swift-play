@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { BarChart3, CircleHelp, Diamond, ChevronRight, History, Home, Trophy, Volume2, VolumeX, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { playBetSound, playSpinSound, playWinSound, playLoseSound, playCountdownBeep, playResultReveal } from "@/hooks/useGameSounds";
+import { playBetSound, playSpinSound, playWinSound, playLoseSound, playCountdownBeep, playResultReveal, startBgMusic, stopBgMusic } from "@/hooks/useGameSounds";
 
 const FOOD_ITEMS = [
   { emoji: "🌭", name: "Hot Dog", multiplier: 10 },
@@ -64,8 +64,17 @@ const GreedyKingGame = () => {
 
   useEffect(() => {
     startBettingPhase();
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+      stopBgMusic();
+    };
   }, []);
+
+  // Toggle bg music with sound setting
+  useEffect(() => {
+    if (soundOn) startBgMusic();
+    else stopBgMusic();
+  }, [soundOn]);
 
   const startBettingPhase = useCallback(() => {
     setPhase("betting");
