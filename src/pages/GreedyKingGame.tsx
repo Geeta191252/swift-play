@@ -26,7 +26,8 @@ type GamePhase = "betting" | "countdown" | "spinning" | "result";
 
 const GreedyKingGame = () => {
   const navigate = useNavigate();
-  const [gems, setGems] = useState(7575);
+  const [dollarBalance, setDollarBalance] = useState(7575);
+  const [starBalance, setStarBalance] = useState(3200);
   const [todayProfits, setTodayProfits] = useState(0);
   const [selectedBet, setSelectedBet] = useState(10);
   const [userBets, setUserBets] = useState<number[]>(() => FOOD_ITEMS.map(() => 0));
@@ -124,7 +125,7 @@ const GreedyKingGame = () => {
           const netProfit = amount - lostOnOthers;
           setWinAmount(amount);
           setTotalLost(lostOnOthers);
-          setGems(g => g + amount);
+          setDollarBalance(g => g + amount);
           setTodayProfits(p => p + netProfit);
         } else {
           setWinAmount(0);
@@ -158,8 +159,8 @@ const GreedyKingGame = () => {
 
   const betOnFruitClick = (fruitIndex: number) => {
     if (phase !== "betting") return;
-    if (gems < selectedBet) return;
-    setGems(prev => prev - selectedBet);
+    if (dollarBalance < selectedBet) return;
+    setDollarBalance(prev => prev - selectedBet);
     setUserBets(prev => {
       const copy = [...prev];
       copy[fruitIndex] += selectedBet;
@@ -221,7 +222,7 @@ const GreedyKingGame = () => {
               const y = 150 + r * Math.sin(angle);
               const myBet = userBets[i];
               const hasBetOnThis = myBet > 0;
-              const canBet = phase === "betting" && gems >= selectedBet;
+              const canBet = phase === "betting" && dollarBalance >= selectedBet;
 
               return (
                 <div key={i} className="absolute flex flex-col items-center"
@@ -365,19 +366,17 @@ const GreedyKingGame = () => {
           })}
         </div>
 
-        {/* Gems & Profits */}
+        {/* Wallets: $ and ⭐ */}
         <div className="w-full flex gap-2 mt-3">
           <div className="flex-1 rounded-full px-3 py-2.5 flex items-center justify-center gap-1.5" style={{ background: "hsla(0, 0%, 100%, 0.9)" }}>
-            <span className="text-[10px] font-semibold" style={{ color: "hsl(0, 0%, 45%)" }}>Gems left</span>
-            <Diamond className="h-3 w-3 text-primary" />
-            <span className="font-bold text-sm" style={{ color: "hsl(0, 0%, 15%)" }}>{gems.toLocaleString()}</span>
+            <span className="text-[10px] font-semibold" style={{ color: "hsl(0, 0%, 45%)" }}>Balance</span>
+            <span className="text-base">💲</span>
+            <span className="font-bold text-sm" style={{ color: "hsl(0, 0%, 15%)" }}>{dollarBalance.toLocaleString()}</span>
           </div>
           <div className="flex-1 rounded-full px-3 py-2.5 flex items-center justify-center gap-1.5" style={{ background: "hsla(0, 0%, 100%, 0.9)" }}>
-            <span className="text-[10px] font-semibold" style={{ color: "hsl(0, 0%, 45%)" }}>Today's Profits</span>
-            <Diamond className="h-3 w-3 text-primary" />
-            <span className="font-bold text-sm" style={{ color: todayProfits >= 0 ? "hsl(140, 60%, 35%)" : "hsl(0, 65%, 50%)" }}>
-              {todayProfits >= 0 ? "+" : ""}{todayProfits}
-            </span>
+            <span className="text-[10px] font-semibold" style={{ color: "hsl(0, 0%, 45%)" }}>Stars</span>
+            <span className="text-base">⭐</span>
+            <span className="font-bold text-sm" style={{ color: "hsl(45, 90%, 45%)" }}>{starBalance.toLocaleString()}</span>
           </div>
         </div>
 
