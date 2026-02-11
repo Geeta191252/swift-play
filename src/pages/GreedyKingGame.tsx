@@ -29,29 +29,27 @@ const GreedyKingGame = () => {
   const [gems, setGems] = useState(7575);
   const [todayProfits, setTodayProfits] = useState(0);
   const [selectedBet, setSelectedBet] = useState(10);
-  const [betOnFruit, setBetOnFruit] = useState<number | null>(null);
-  const [userBetCount, setUserBetCount] = useState(0);
-  const [userTotalBet, setUserTotalBet] = useState(0);
+  const [userBets, setUserBets] = useState<number[]>(() => FOOD_ITEMS.map(() => 0));
   const [phase, setPhase] = useState<GamePhase>("betting");
   const [countdown, setCountdown] = useState(15);
   const [wheelAngle, setWheelAngle] = useState(0);
   const [results, setResults] = useState<string[]>([]);
   const [todayRound, setTodayRound] = useState(381);
-  const [currentWinner, setCurrentWinner] = useState<typeof FOOD_ITEMS[0] | null>(null);
+  const [currentWinner, setCurrentWinner] = useState<{ item: typeof FOOD_ITEMS[0]; index: number } | null>(null);
   const [winAmount, setWinAmount] = useState(0);
+  const [totalLost, setTotalLost] = useState(0);
   const [resultTimer, setResultTimer] = useState(4);
-  const [fakeBetCounts, setFakeBetCounts] = useState<number[]>(() =>
+  const [fakeBetCounts] = useState<number[]>(() =>
     FOOD_ITEMS.map(() => Math.floor(Math.random() * 50) + 5)
   );
   const totalRotationRef = useRef(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const selectedBetRef = useRef(selectedBet);
-  const betOnFruitRef = useRef<number | null>(null);
-  const userTotalBetRef = useRef(0);
+  const userBetsRef = useRef<number[]>(FOOD_ITEMS.map(() => 0));
 
-  useEffect(() => { selectedBetRef.current = selectedBet; }, [selectedBet]);
-  useEffect(() => { betOnFruitRef.current = betOnFruit; }, [betOnFruit]);
-  useEffect(() => { userTotalBetRef.current = userTotalBet; }, [userTotalBet]);
+  useEffect(() => { userBetsRef.current = userBets; }, [userBets]);
+
+  const totalUserBet = userBets.reduce((a, b) => a + b, 0);
+  const hasBet = totalUserBet > 0;
 
   useEffect(() => {
     startBettingPhase();
@@ -60,12 +58,11 @@ const GreedyKingGame = () => {
 
   const startBettingPhase = useCallback(() => {
     setPhase("betting");
-    setBetOnFruit(null);
-    setUserBetCount(0);
-    setUserTotalBet(0);
+    setUserBets(FOOD_ITEMS.map(() => 0));
     setCurrentWinner(null);
+    setWinAmount(0);
+    setTotalLost(0);
     setCountdown(15);
-    setFakeBetCounts(FOOD_ITEMS.map(() => Math.floor(Math.random() * 50) + 5));
 
     if (timerRef.current) clearInterval(timerRef.current);
     timerRef.current = setInterval(() => {
@@ -106,25 +103,31 @@ const GreedyKingGame = () => {
 
     setTimeout(() => {
       const won = FOOD_ITEMS[winnerIdx];
-      setCurrentWinner(won);
+      setCurrentWinner({ item: won, index: winnerIdx });
       setResults(prev => [won.emoji, ...prev].slice(0, 12));
       setTodayRound(prev => prev + 1);
 
-      const currentBetFruit = betOnFruitRef.current;
-      const currentTotalBet = userTotalBetRef.current;
+      const bets = userBetsRef.current;
+      const totalBet = bets.reduce((a, b) => a + b, 0);
 
-      if (currentBetFruit !== null && currentTotalBet > 0) {
-        if (currentBetFruit === winnerIdx) {
-          const amount = Math.round(currentTotalBet * (won.multiplier / 10));
+      if (totalBet > 0) {
+        const betOnWinner = bets[winnerIdx];
+        if (betOnWinner > 0) {
+          const amount = Math.round(betOnWinner * (won.multiplier / 10));
+          const lostOnOthers = totalBet - betOnWinner;
+          const netProfit = amount - lostOnOthers;
           setWinAmount(amount);
+          setTotalLost(lostOnOthers);
           setGems(g => g + amount);
-          setTodayProfits(p => p + (amount - currentTotalBet));
+          setTodayProfits(p => p + netProfit);
         } else {
           setWinAmount(0);
-          setTodayProfits(p => p - currentTotalBet);
+          setTotalLost(totalBet);
+          setTodayProfits(p => p - totalBet);
         }
       } else {
         setWinAmount(0);
+        setTotalLost(0);
       }
 
       showResult();
@@ -147,27 +150,16 @@ const GreedyKingGame = () => {
     }, 1000);
   }, [startBettingPhase]);
 
-  // Click on a fruit to place bet
   const betOnFruitClick = (fruitIndex: number) => {
     if (phase !== "betting") return;
     if (gems < selectedBet) return;
-
-    // If already bet on a different fruit, don't allow
-    if (betOnFruit !== null && betOnFruit !== fruitIndex) return;
-
     setGems(prev => prev - selectedBet);
-    setBetOnFruit(fruitIndex);
-    setUserBetCount(prev => prev + 1);
-    setUserTotalBet(prev => prev + selectedBet);
-    // Increase fake count too to show activity
-    setFakeBetCounts(prev => {
+    setUserBets(prev => {
       const copy = [...prev];
-      copy[fruitIndex] += 1;
+      copy[fruitIndex] += selectedBet;
       return copy;
     });
   };
-
-  const hasBet = betOnFruit !== null;
 
   const topBarItems = [
     { icon: Home, action: () => navigate("/") },
@@ -196,23 +188,21 @@ const GreedyKingGame = () => {
         </div>
       </div>
 
-      {/* Wheel Section */}
+      {/* Wheel */}
       <div className="flex flex-col items-center px-4 pt-2 pb-4">
         <div className="relative w-[300px] h-[300px] my-2">
           {/* Spokes */}
           <svg className="absolute inset-0 w-full h-full z-0" viewBox="0 0 300 300">
             {FOOD_ITEMS.map((_, i) => {
               const angle = (i * 45 - 90) * (Math.PI / 180);
-              const cx = 150, cy = 150, r = 110;
               return (
-                <line key={i} x1={cx} y1={cy} x2={cx + r * Math.cos(angle)} y2={cy + r * Math.sin(angle)} stroke="hsl(200 70% 60%)" strokeWidth="3" />
+                <line key={i} x1={150} y1={150} x2={150 + 110 * Math.cos(angle)} y2={150 + 110 * Math.sin(angle)} stroke="hsl(200 70% 60%)" strokeWidth="3" />
               );
             })}
           </svg>
 
-          {/* Rotating food items - CLICKABLE */}
-          <div
-            className="absolute inset-0 z-10"
+          {/* Rotating food items */}
+          <div className="absolute inset-0 z-10"
             style={{
               transform: `rotate(${wheelAngle}deg)`,
               transition: phase === "spinning" ? "transform 4s cubic-bezier(0.17, 0.67, 0.12, 0.99)" : "none",
@@ -223,48 +213,46 @@ const GreedyKingGame = () => {
               const r = 115;
               const x = 150 + r * Math.cos(angle);
               const y = 150 + r * Math.sin(angle);
-              const isMyBet = betOnFruit === i;
-              const canBet = phase === "betting" && (betOnFruit === null || betOnFruit === i) && gems >= selectedBet;
-              const totalOnThis = fakeBetCounts[i] + (isMyBet ? userBetCount : 0);
+              const myBet = userBets[i];
+              const hasBetOnThis = myBet > 0;
+              const canBet = phase === "betting" && gems >= selectedBet;
 
               return (
-                <div
-                  key={i}
-                  className="absolute flex flex-col items-center"
+                <div key={i} className="absolute flex flex-col items-center"
                   style={{
-                    left: x,
-                    top: y,
+                    left: x, top: y,
                     transform: `translate(-50%, -50%) rotate(-${wheelAngle}deg)`,
                     transition: phase === "spinning" ? "transform 4s cubic-bezier(0.17, 0.67, 0.12, 0.99)" : "none",
                   }}
                 >
                   <button
                     onClick={() => betOnFruitClick(i)}
-                    disabled={!canBet && !isMyBet}
-                    className={`w-16 h-16 rounded-full border-[3px] bg-white flex items-center justify-center shadow-md transition-all relative ${
-                      isMyBet ? "scale-110 ring-2" : canBet ? "active:scale-95" : ""
-                    }`}
+                    disabled={!canBet}
+                    className="w-16 h-16 rounded-full border-[3px] flex flex-col items-center justify-center shadow-md transition-all relative"
                     style={{
-                      borderColor: isMyBet ? "hsl(50, 90%, 50%)" : "hsl(220, 70%, 55%)",
-                      cursor: canBet || isMyBet ? "pointer" : "default",
-                      boxShadow: isMyBet ? "0 0 0 3px hsl(50, 90%, 50%)" : undefined,
+                      borderColor: hasBetOnThis ? "hsl(220, 70%, 55%)" : "hsl(220, 70%, 55%)",
+                      background: hasBetOnThis
+                        ? "linear-gradient(180deg, hsla(30, 80%, 85%, 1) 0%, hsla(30, 70%, 75%, 1) 100%)"
+                        : "white",
+                      cursor: canBet ? "pointer" : "default",
                     }}
                   >
-                    <span className="text-xl">{food.emoji}</span>
-                    {/* User bet indicator */}
-                    {isMyBet && (
-                      <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white"
-                        style={{ background: "hsl(0, 70%, 50%)" }}>
-                        {userBetCount}
+                    <span className={hasBetOnThis ? "text-base" : "text-xl"}>{food.emoji}</span>
+                    {/* Show user's bet amount inside the circle */}
+                    {hasBetOnThis && (
+                      <div className="flex items-center gap-0.5 mt-[-2px]">
+                        <span className="text-[7px] font-bold" style={{ color: "hsl(0, 60%, 45%)" }}>You:</span>
+                        <Diamond className="h-2 w-2" style={{ color: "hsl(35, 90%, 50%)" }} />
+                        <span className="text-[8px] font-bold" style={{ color: "hsl(35, 80%, 40%)" }}>{myBet}</span>
                       </div>
                     )}
                   </button>
-                  {/* Total bet count */}
+                  {/* Win multiplier label */}
                   <span className="text-[8px] font-bold mt-0.5 px-1.5 rounded-full whitespace-nowrap" style={{
-                    background: isMyBet ? "hsla(50, 90%, 60%, 0.9)" : "hsla(210, 80%, 90%, 0.9)",
-                    color: isMyBet ? "hsl(30, 60%, 20%)" : "hsl(210, 60%, 30%)",
+                    background: hasBetOnThis ? "hsla(30, 80%, 85%, 0.95)" : "hsla(210, 80%, 90%, 0.9)",
+                    color: hasBetOnThis ? "hsl(0, 60%, 40%)" : "hsl(210, 60%, 30%)",
                   }}>
-                    {totalOnThis} bets
+                    Win {food.multiplier} times
                   </span>
                   {i === 0 && (
                     <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-white text-[7px] font-bold px-1.5 rounded-full" style={{ background: "hsl(0, 70%, 50%)" }}>
@@ -276,7 +264,7 @@ const GreedyKingGame = () => {
             })}
           </div>
 
-          {/* Center circle */}
+          {/* Center */}
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 w-24 h-24 rounded-full border-4 flex flex-col items-center justify-center"
             style={{
               borderColor: (phase === "countdown" || phase === "spinning") ? "hsl(0, 0%, 15%)" : "hsl(0, 70%, 45%)",
@@ -285,8 +273,8 @@ const GreedyKingGame = () => {
           >
             {phase === "betting" && (
               <>
-                <span className="text-xl">🍴</span>
-                <p className="text-[8px] text-white font-bold leading-tight">Tap fruit to bet</p>
+                <span className="text-lg">🍴</span>
+                <p className="text-[8px] text-white font-bold leading-tight">Select time</p>
                 <p className="text-2xl font-bold text-white leading-tight">{countdown}</p>
               </>
             )}
@@ -304,8 +292,8 @@ const GreedyKingGame = () => {
             )}
             {phase === "result" && currentWinner && (
               <>
-                <span className="text-2xl">{currentWinner.emoji}</span>
-                <p className="text-[8px] text-white font-bold">{currentWinner.name}</p>
+                <span className="text-2xl">{currentWinner.item.emoji}</span>
+                <p className="text-[8px] text-white font-bold">{currentWinner.item.name}</p>
               </>
             )}
           </div>
@@ -316,37 +304,21 @@ const GreedyKingGame = () => {
           />
         </div>
 
-        {/* Your bet info */}
+        {/* Total bet info */}
         {hasBet && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mt-1 rounded-xl px-4 py-2 flex items-center gap-2"
-            style={{ background: "hsla(0, 0%, 100%, 0.9)" }}
-          >
-            <span className="text-lg">{FOOD_ITEMS[betOnFruit!].emoji}</span>
-            <div>
-              <p className="text-[10px] font-semibold" style={{ color: "hsl(0, 0%, 50%)" }}>Your bet</p>
-              <p className="font-bold text-sm" style={{ color: "hsl(0, 0%, 15%)" }}>
-                {userBetCount}x = <Diamond className="h-3 w-3 text-primary inline" /> {userTotalBet}
-              </p>
-            </div>
-            {phase === "betting" && gems >= selectedBet && (
-              <button
-                onClick={() => betOnFruitClick(betOnFruit!)}
-                className="ml-2 px-3 py-1.5 rounded-full text-xs font-bold text-white"
-                style={{ background: "hsl(0, 70%, 50%)" }}
-              >
-                +{selectedBet} more
-              </button>
-            )}
-          </motion.div>
+          <div className="mt-1 rounded-xl px-4 py-1.5 flex items-center gap-2" style={{ background: "hsla(0, 0%, 100%, 0.9)" }}>
+            <span className="text-[10px] font-semibold" style={{ color: "hsl(0, 0%, 50%)" }}>Total bet:</span>
+            <Diamond className="h-3 w-3 text-primary" />
+            <span className="font-bold text-sm" style={{ color: "hsl(0, 0%, 15%)" }}>{totalUserBet}</span>
+            <span className="text-[10px]" style={{ color: "hsl(0, 0%, 50%)" }}>
+              on {userBets.filter(b => b > 0).length} fruit{userBets.filter(b => b > 0).length > 1 ? "s" : ""}
+            </span>
+          </div>
         )}
 
-        {/* Instruction text when no bet */}
         {!hasBet && phase === "betting" && (
           <p className="mt-2 text-sm font-bold text-center" style={{ color: "hsl(0, 0%, 25%)" }}>
-            👆 Tap a fruit on the wheel to bet!
+            👆 Tap fruits to place bets!
           </p>
         )}
 
@@ -367,9 +339,7 @@ const GreedyKingGame = () => {
           {BET_OPTIONS.map((bet) => {
             const isActive = selectedBet === bet;
             return (
-              <button
-                key={bet}
-                onClick={() => phase === "betting" && setSelectedBet(bet)}
+              <button key={bet} onClick={() => phase === "betting" && setSelectedBet(bet)}
                 className={`flex-1 rounded-xl p-2 flex flex-col items-center border-2 transition-all ${phase !== "betting" ? "opacity-50" : ""}`}
                 style={{
                   borderColor: isActive ? "hsl(50, 90%, 55%)" : "hsla(200, 50%, 70%, 0.4)",
@@ -392,12 +362,12 @@ const GreedyKingGame = () => {
         {/* Gems & Profits */}
         <div className="w-full flex gap-2 mt-3">
           <div className="flex-1 rounded-full px-3 py-2.5 flex items-center justify-center gap-1.5" style={{ background: "hsla(0, 0%, 100%, 0.9)" }}>
-            <span className="text-[10px] font-semibold" style={{ color: "hsl(0, 0%, 45%)" }}>Gems</span>
+            <span className="text-[10px] font-semibold" style={{ color: "hsl(0, 0%, 45%)" }}>Gems left</span>
             <Diamond className="h-3 w-3 text-primary" />
             <span className="font-bold text-sm" style={{ color: "hsl(0, 0%, 15%)" }}>{gems.toLocaleString()}</span>
           </div>
           <div className="flex-1 rounded-full px-3 py-2.5 flex items-center justify-center gap-1.5" style={{ background: "hsla(0, 0%, 100%, 0.9)" }}>
-            <span className="text-[10px] font-semibold" style={{ color: "hsl(0, 0%, 45%)" }}>Profit</span>
+            <span className="text-[10px] font-semibold" style={{ color: "hsl(0, 0%, 45%)" }}>Today's Profits</span>
             <Diamond className="h-3 w-3 text-primary" />
             <span className="font-bold text-sm" style={{ color: todayProfits >= 0 ? "hsl(140, 60%, 35%)" : "hsl(0, 65%, 50%)" }}>
               {todayProfits >= 0 ? "+" : ""}{todayProfits}
@@ -442,9 +412,7 @@ const GreedyKingGame = () => {
       <AnimatePresence>
         {phase === "result" && currentWinner && (
           <motion.div
-            initial={{ y: "100%" }}
-            animate={{ y: 0 }}
-            exit={{ y: "100%" }}
+            initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
             className="fixed bottom-0 left-0 right-0 z-50 rounded-t-3xl shadow-2xl overflow-hidden"
             style={{ background: "white" }}
@@ -459,25 +427,25 @@ const GreedyKingGame = () => {
                 <span className="text-lg opacity-40">🍴</span>
                 <span className="text-lg opacity-40">🥄</span>
                 <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.2, type: "spring" }} className="text-5xl">
-                  {currentWinner.emoji}
+                  {currentWinner.item.emoji}
                 </motion.span>
                 <span className="text-lg opacity-40">🔪</span>
                 <span className="text-lg opacity-40">🍽️</span>
               </div>
 
               <p className="text-center text-sm font-semibold" style={{ color: "hsl(0, 0%, 30%)" }}>
-                The {todayRound} round's result: {currentWinner.emoji}
+                The {todayRound} round's result: {currentWinner.item.emoji}
               </p>
 
               {hasBet ? (
                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
                   {winAmount > 0 ? (
                     <p className="text-center font-bold text-lg mt-1" style={{ color: "hsl(140, 60%, 35%)" }}>
-                      🎉 You won {winAmount} gems! ({userBetCount} bets × {FOOD_ITEMS[betOnFruit!].multiplier}x)
+                      🎉 You won {winAmount} gems! (bet {userBets[currentWinner.index]} on {currentWinner.item.emoji})
                     </p>
                   ) : (
                     <p className="text-center font-bold text-lg mt-1" style={{ color: "hsl(0, 60%, 45%)" }}>
-                      😅 You lost {userTotalBet} gems ({userBetCount} bets on {FOOD_ITEMS[betOnFruit!].emoji})
+                      😅 You lost {totalLost} gems
                     </p>
                   )}
                 </motion.div>
