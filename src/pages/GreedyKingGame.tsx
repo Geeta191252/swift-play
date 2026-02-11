@@ -119,7 +119,7 @@ const GreedyKingGame = () => {
       if (totalBet > 0) {
         const betOnWinner = bets[winnerIdx];
         if (betOnWinner > 0) {
-          const amount = Math.round(betOnWinner * (won.multiplier / 10));
+          const amount = betOnWinner * won.multiplier;
           const lostOnOthers = totalBet - betOnWinner;
           const netProfit = amount - lostOnOthers;
           setWinAmount(amount);
