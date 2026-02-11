@@ -382,11 +382,21 @@ const GreedyKingGame = () => {
           <div className="flex-1 rounded-full px-3 py-2.5 flex items-center justify-center gap-1.5 border-2"
             style={{
               background: "hsla(0, 0%, 100%, 0.9)",
-              borderColor: activeWallet === "star" ? "hsl(45, 90%, 50%)" : "transparent",
+              borderColor: activeWallet === "star" ? "hsl(45, 90%, 50%)" : activeWallet === "dollar" ? "hsl(140, 60%, 45%)" : "transparent",
             }}>
-            <span className="text-[10px] font-semibold" style={{ color: "hsl(0, 0%, 45%)" }}>Stars</span>
-            <span className="text-base">⭐</span>
-            <span className="font-bold text-sm" style={{ color: "hsl(45, 90%, 45%)" }}>{starBalance.toLocaleString()}</span>
+            {activeWallet === "star" ? (
+              <>
+                <span className="text-[10px] font-semibold" style={{ color: "hsl(0, 0%, 45%)" }}>Stars</span>
+                <span className="text-base">⭐</span>
+                <span className="font-bold text-sm" style={{ color: "hsl(45, 90%, 45%)" }}>{starBalance.toLocaleString()}</span>
+              </>
+            ) : (
+              <>
+                <span className="text-[10px] font-semibold" style={{ color: "hsl(0, 0%, 45%)" }}>Balance</span>
+                <span className="text-base">💲</span>
+                <span className="font-bold text-sm" style={{ color: "hsl(0, 0%, 15%)" }}>{dollarBalance.toLocaleString()}</span>
+              </>
+            )}
           </div>
           <button
             onClick={() => setActiveWallet(prev => prev === "dollar" ? "star" : "dollar")}
@@ -398,15 +408,6 @@ const GreedyKingGame = () => {
           >
             <span className="text-xs">🔄</span>
           </button>
-          <div className="flex-1 rounded-full px-3 py-2.5 flex items-center justify-center gap-1.5 border-2"
-            style={{
-              background: "hsla(0, 0%, 100%, 0.9)",
-              borderColor: activeWallet === "dollar" ? "hsl(140, 60%, 45%)" : "transparent",
-            }}>
-            <span className="text-[10px] font-semibold" style={{ color: "hsl(0, 0%, 45%)" }}>Balance</span>
-            <span className="text-base">💲</span>
-            <span className="font-bold text-sm" style={{ color: "hsl(0, 0%, 15%)" }}>{dollarBalance.toLocaleString()}</span>
-          </div>
         </div>
 
         {/* Results */}
