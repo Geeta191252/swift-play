@@ -17,13 +17,29 @@ const FOOD_ITEMS = [
 
 const BET_OPTIONS = [10, 100, 1000, 10000];
 
-const FAKE_PLAYERS = [
-  { name: "Meer", wallet: "dollar" as const },
-  { name: "Ronnie H.", wallet: "star" as const },
-  { name: "Ali Khan", wallet: "dollar" as const },
-  { name: "Zara M.", wallet: "star" as const },
-  { name: "Hassan", wallet: "dollar" as const },
+const FAKE_NAMES = [
+  "Meer", "Ronnie H.", "Ali Khan", "Zara M.", "Hassan", "Guest_fTZaai", "kailash", "Raj",
+  "Guest_ClztlT", "Priya S.", "Amit K.", "Sara J.", "Vikram", "Neha R.", "Rohit P.",
+  "Guest_xK9mL", "Deepak", "Anita M.", "Suresh B.", "Kavita D.", "Guest_pQ7nR",
+  "Manish T.", "Pooja L.", "Arun S.", "Divya K.", "Guest_mN3wX", "Ravi G.",
+  "Sunita P.", "Mukesh J.", "Rekha V.", "Guest_hY2kF", "Sanjay M.", "Nisha A.",
+  "Pankaj R.", "Meena S.", "Guest_tR8vB", "Rajesh K.", "Swati N.", "Vinod L.",
+  "Geeta D.", "Guest_wL5cZ", "Ashok P.", "Lata M.", "Sunil J.", "Kamla R.",
+  "Guest_bN4qW", "Mohan S.", "Usha K.", "Prakash D.", "Shanti V."
 ];
+
+const generateLeaderboard = (walletType: "dollar" | "star") => {
+  const seed = walletType === "dollar" ? 1 : 2;
+  return FAKE_NAMES.map((name, i) => {
+    const base = (i + 1) * seed * 7919;
+    const totalGames = 50 + ((base * 31) % 450);
+    const totalWins = Math.floor(totalGames * (0.2 + ((base * 17) % 60) / 100));
+    const amount = walletType === "dollar"
+      ? 8000000 - (i * ((base * 13) % 120000 + 50000))
+      : 5000000 - (i * ((base * 11) % 100000 + 40000));
+    return { name, totalGames, totalWins, amount: Math.max(amount, 1000 + ((base * 7) % 5000)) };
+  }).sort((a, b) => b.amount - a.amount);
+};
 
 type GamePhase = "betting" | "countdown" | "spinning" | "result";
 
@@ -37,6 +53,7 @@ const GreedyKingGame = () => {
   const [todayProfits, setTodayProfits] = useState(0);
   const [activeWallet, setActiveWallet] = useState<"dollar" | "star">("dollar");
   const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [leaderboardTab, setLeaderboardTab] = useState<"dollar" | "star">("dollar");
   const [selectedBet, setSelectedBet] = useState(10);
   const [userBets, setUserBets] = useState<number[]>(() => FOOD_ITEMS.map(() => 0));
   const [phase, setPhase] = useState<GamePhase>("betting");
@@ -528,9 +545,9 @@ const GreedyKingGame = () => {
               {(() => {
                 // Build leaderboard: fake players + user
                 const userTotalBet = userBets.reduce((a, b) => a + b, 0);
-                const leaderboard = FAKE_PLAYERS.map(p => ({
-                  name: p.name,
-                  wallet: p.wallet,
+                const leaderboard = FAKE_NAMES.slice(0, 5).map((name, i) => ({
+                  name,
+                  wallet: i % 2 === 0 ? "dollar" as const : "star" as const,
                   amount: Math.floor(Math.random() * 500) + 50,
                 }));
                 leaderboard.push({
@@ -574,63 +591,89 @@ const GreedyKingGame = () => {
         {showLeaderboard && (
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center px-4"
-            style={{ background: "hsla(0, 0%, 0%, 0.6)" }}
-            onClick={() => setShowLeaderboard(false)}
+            className="fixed inset-0 z-50 flex flex-col"
+            style={{ background: "linear-gradient(180deg, hsl(220, 60%, 15%) 0%, hsl(220, 70%, 8%) 100%)" }}
           >
-            <motion.div
-              initial={{ scale: 0.8, y: 40 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.8, y: 40 }}
-              className="w-full max-w-sm rounded-2xl p-4"
-              style={{ background: "hsl(0, 0%, 100%)" }}
-              onClick={e => e.stopPropagation()}
-            >
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-bold flex items-center gap-2" style={{ color: "hsl(0, 0%, 15%)" }}>
-                  🏆 Leaderboard
-                </h2>
-                <button onClick={() => setShowLeaderboard(false)}>
-                  <X className="h-5 w-5" style={{ color: "hsl(0, 0%, 50%)" }} />
-                </button>
-              </div>
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 py-3">
+              <button onClick={() => setShowLeaderboard(false)} className="w-9 h-9 rounded-full flex items-center justify-center" style={{ background: "hsla(0, 0%, 100%, 0.1)" }}>
+                <X className="h-5 w-5" style={{ color: "hsl(0, 0%, 90%)" }} />
+              </button>
+              <h2 className="text-lg font-bold" style={{ color: "hsl(45, 90%, 65%)" }}>🏆 Leaderboard</h2>
+              <div className="w-9" />
+            </div>
 
+            {/* Tabs */}
+            <div className="flex mx-4 rounded-xl overflow-hidden mb-3" style={{ background: "hsla(0, 0%, 100%, 0.08)" }}>
+              <button
+                onClick={() => setLeaderboardTab("dollar")}
+                className="flex-1 py-2.5 text-sm font-bold flex items-center justify-center gap-1.5 transition-all"
+                style={{
+                  background: leaderboardTab === "dollar" ? "linear-gradient(135deg, hsl(45, 90%, 55%), hsl(35, 85%, 45%))" : "transparent",
+                  color: leaderboardTab === "dollar" ? "hsl(0, 0%, 10%)" : "hsl(0, 0%, 60%)",
+                }}>
+                💲 Dollar Ranking
+              </button>
+              <button
+                onClick={() => setLeaderboardTab("star")}
+                className="flex-1 py-2.5 text-sm font-bold flex items-center justify-center gap-1.5 transition-all"
+                style={{
+                  background: leaderboardTab === "star" ? "linear-gradient(135deg, hsl(270, 70%, 55%), hsl(280, 60%, 45%))" : "transparent",
+                  color: leaderboardTab === "star" ? "hsl(0, 0%, 100%)" : "hsl(0, 0%, 60%)",
+                }}>
+                ⭐ Star Ranking
+              </button>
+            </div>
+
+            {/* Player List */}
+            <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-2">
               {(() => {
-                const players = [
-                  ...FAKE_PLAYERS.map(p => ({
-                    name: p.name,
-                    wallet: p.wallet,
-                    amount: Math.floor(Math.random() * 800) + 100,
-                  })),
-                  { name: "You", wallet: activeWallet, amount: todayProfits > 0 ? todayProfits : 0 },
-                ];
-                players.sort((a, b) => b.amount - a.amount);
+                const players = generateLeaderboard(leaderboardTab);
+                const currIcon = leaderboardTab === "dollar" ? "💲" : "⭐";
 
-                return (
-                  <div className="space-y-2">
-                    {players.map((p, i) => (
-                      <div key={i} className="flex items-center gap-3 rounded-xl px-3 py-2.5"
-                        style={{
-                          background: p.name === "You" ? "hsl(45, 80%, 92%)" : "hsl(0, 0%, 96%)",
-                          border: p.name === "You" ? "2px solid hsl(45, 80%, 60%)" : "none",
-                        }}>
-                        <span className="w-6 text-center font-bold text-sm" style={{
-                          color: i === 0 ? "hsl(50, 90%, 45%)" : i === 1 ? "hsl(210, 60%, 50%)" : i === 2 ? "hsl(25, 70%, 50%)" : "hsl(0, 0%, 50%)"
-                        }}>
+                return players.map((p, i) => {
+                  const isTop3 = i < 3;
+                  const cardBg = i === 0
+                    ? "linear-gradient(135deg, hsl(45, 85%, 55%), hsl(40, 80%, 40%))"
+                    : i === 1
+                    ? "linear-gradient(135deg, hsl(200, 70%, 55%), hsl(210, 65%, 40%))"
+                    : i === 2
+                    ? "linear-gradient(135deg, hsl(15, 70%, 55%), hsl(10, 65%, 40%))"
+                    : "linear-gradient(135deg, hsl(220, 60%, 25%), hsl(220, 55%, 20%))";
+
+                  return (
+                    <div key={i} className="rounded-xl px-3 py-3 relative overflow-hidden"
+                      style={{ background: cardBg, border: isTop3 ? "1px solid hsla(0, 0%, 100%, 0.2)" : "1px solid hsla(0, 0%, 100%, 0.05)" }}>
+                      {isTop3 && (
+                        <div className="absolute top-1 right-2 text-3xl opacity-20">👑</div>
+                      )}
+                      <div className="flex items-center gap-3">
+                        <span className="w-7 text-center font-bold text-base" style={{ color: "hsl(0, 0%, 100%)" }}>
                           {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}`}
                         </span>
-                        <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ background: "hsl(210, 20%, 88%)" }}>
-                          <span className="text-lg">{p.name === "You" ? "🙋" : "👤"}</span>
+                        <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: "hsla(0, 0%, 100%, 0.15)" }}>
+                          <span className="text-lg">👤</span>
                         </div>
-                        <div className="flex-1">
-                          <p className="text-sm font-semibold" style={{ color: "hsl(0, 0%, 15%)" }}>{p.name}</p>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-bold truncate" style={{ color: "hsl(0, 0%, 100%)" }}>{p.name}</p>
+                          <p className="text-[10px]" style={{ color: "hsla(0, 0%, 100%, 0.6)" }}>
+                            Betting: {currIcon} {p.amount.toLocaleString()}
+                          </p>
                         </div>
-                        <span className="text-sm">{p.wallet === "dollar" ? "💲" : "⭐"}</span>
-                        <span className="font-bold text-sm" style={{ color: "hsl(35, 90%, 40%)" }}>{p.amount}</span>
                       </div>
-                    ))}
-                  </div>
-                );
+                      <div className="mt-1.5 flex items-center gap-3 pl-10">
+                        <span className="text-[10px]" style={{ color: "hsla(0, 0%, 100%, 0.5)" }}>
+                          🎮 {p.totalGames} Games
+                        </span>
+                        <span className="text-[10px]" style={{ color: "hsla(0, 0%, 100%, 0.5)" }}>
+                          🏆 {p.totalWins} Wins
+                        </span>
+                      </div>
+                    </div>
+                  );
+                });
               })()}
-            </motion.div>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
