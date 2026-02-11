@@ -205,9 +205,6 @@ const GreedyKingGame = () => {
   const topBarItems = [
     { icon: Home, action: () => navigate("/") },
     { icon: soundOn ? Volume2 : VolumeX, action: () => setSoundOn(p => !p) },
-    { icon: CircleHelp, action: undefined },
-    { icon: History, action: undefined },
-    { icon: BarChart3, action: undefined },
     { icon: Trophy, action: undefined },
   ];
 
