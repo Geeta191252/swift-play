@@ -41,9 +41,14 @@ const GreedyKingGame = () => {
   const [winAmount, setWinAmount] = useState(0);
   const [totalLost, setTotalLost] = useState(0);
   const [resultTimer, setResultTimer] = useState(4);
-  const [fakeBetCounts] = useState<number[]>(() =>
+  // Separate fake bets per wallet
+  const [fakeBetsDollar] = useState<number[]>(() =>
     FOOD_ITEMS.map(() => Math.floor(Math.random() * 50) + 5)
   );
+  const [fakeBetsStar] = useState<number[]>(() =>
+    FOOD_ITEMS.map(() => Math.floor(Math.random() * 40) + 3)
+  );
+  const fakeBetCounts = activeWallet === "dollar" ? fakeBetsDollar : fakeBetsStar;
   const totalRotationRef = useRef(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const userBetsRef = useRef<number[]>(FOOD_ITEMS.map(() => 0));
@@ -399,11 +404,16 @@ const GreedyKingGame = () => {
             )}
           </div>
           <button
-            onClick={() => setActiveWallet(prev => prev === "dollar" ? "star" : "dollar")}
+            onClick={() => {
+              const hasBet = userBets.some(b => b > 0);
+              if (phase !== "betting" || hasBet) return;
+              setActiveWallet(prev => prev === "dollar" ? "star" : "dollar");
+            }}
             className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 border-2 transition-all active:scale-90"
             style={{
               background: "hsla(0, 0%, 100%, 0.95)",
               borderColor: "hsl(45, 80%, 55%)",
+              opacity: (phase !== "betting" || userBets.some(b => b > 0)) ? 0.4 : 1,
             }}
           >
             <span className="text-xs">🔄</span>
