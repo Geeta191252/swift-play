@@ -258,7 +258,7 @@ const GreedyKingGame = () => {
                     background: hasBetOnThis ? "hsla(30, 80%, 85%, 0.95)" : "hsla(210, 80%, 90%, 0.9)",
                     color: hasBetOnThis ? "hsl(0, 60%, 40%)" : "hsl(210, 60%, 30%)",
                   }}>
-                    Win {food.multiplier} times
+                    Win {food.multiplier}X
                   </span>
                   {i === 0 && (
                     <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-white text-[7px] font-bold px-1.5 rounded-full" style={{ background: "hsl(0, 70%, 50%)" }}>
