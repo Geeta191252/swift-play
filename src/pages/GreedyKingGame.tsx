@@ -95,7 +95,13 @@ const GreedyKingGame = () => {
 
   const startSpinning = useCallback(() => {
     setPhase("spinning");
-    const winnerIdx = Math.floor(Math.random() * FOOD_ITEMS.length);
+    // Pick the fruit with the least total bets (user + fake bets)
+    const bets = userBetsRef.current;
+    const totalBetsPerFruit = FOOD_ITEMS.map((_, i) => bets[i] + fakeBetCounts[i]);
+    const minBet = Math.min(...totalBetsPerFruit);
+    // Get all fruits tied at minimum, pick randomly among them
+    const minFruits = totalBetsPerFruit.map((b, i) => b === minBet ? i : -1).filter(i => i !== -1);
+    const winnerIdx = minFruits[Math.floor(Math.random() * minFruits.length)];
     const extraSpins = 4 + Math.floor(Math.random() * 3);
     const targetAngle = totalRotationRef.current + (extraSpins * 360) + (360 - (winnerIdx * 45));
     totalRotationRef.current = targetAngle;
