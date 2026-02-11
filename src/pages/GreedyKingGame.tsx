@@ -1,7 +1,8 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { BarChart3, CircleHelp, Diamond, ChevronRight, History, Home, Trophy, Volume2, X } from "lucide-react";
+import { BarChart3, CircleHelp, Diamond, ChevronRight, History, Home, Trophy, Volume2, VolumeX, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { playBetSound, playSpinSound, playWinSound, playLoseSound, playCountdownBeep, playResultReveal } from "@/hooks/useGameSounds";
 
 const FOOD_ITEMS = [
   { emoji: "🌭", name: "Hot Dog", multiplier: 10 },
@@ -26,6 +27,9 @@ type GamePhase = "betting" | "countdown" | "spinning" | "result";
 
 const GreedyKingGame = () => {
   const navigate = useNavigate();
+  const [soundOn, setSoundOn] = useState(true);
+  const soundRef = useRef(true);
+  useEffect(() => { soundRef.current = soundOn; }, [soundOn]);
   const [dollarBalance, setDollarBalance] = useState(7575);
   const [starBalance, setStarBalance] = useState(3200);
   const [todayProfits, setTodayProfits] = useState(0);
@@ -95,6 +99,7 @@ const GreedyKingGame = () => {
           startSpinning();
           return 0;
         }
+        if (soundRef.current) playCountdownBeep();
         return prev - 1;
       });
     }, 1000);
@@ -102,6 +107,7 @@ const GreedyKingGame = () => {
 
   const startSpinning = useCallback(() => {
     setPhase("spinning");
+    if (soundRef.current) playSpinSound();
     // Pick the fruit with the least total bets (user + fake bets)
     const bets = userBetsRef.current;
     const totalBetsPerFruit = FOOD_ITEMS.map((_, i) => bets[i] + fakeBetCounts[i]);
@@ -116,6 +122,7 @@ const GreedyKingGame = () => {
 
     setTimeout(() => {
       const won = FOOD_ITEMS[winnerIdx];
+      if (soundRef.current) playResultReveal();
       setCurrentWinner({ item: won, index: winnerIdx });
       setResults(prev => [won.emoji, ...prev].slice(0, 12));
       setTodayRound(prev => prev + 1);
@@ -137,10 +144,12 @@ const GreedyKingGame = () => {
             setStarBalance(g => g + amount);
           }
           setTodayProfits(p => p + netProfit);
+          if (soundRef.current) playWinSound();
         } else {
           setWinAmount(0);
           setTotalLost(totalBet);
           setTodayProfits(p => p - totalBet);
+          if (soundRef.current) playLoseSound();
         }
       } else {
         setWinAmount(0);
@@ -181,11 +190,12 @@ const GreedyKingGame = () => {
       copy[fruitIndex] += selectedBet;
       return copy;
     });
+    if (soundRef.current) playBetSound();
   };
 
   const topBarItems = [
     { icon: Home, action: () => navigate("/") },
-    { icon: Volume2, action: undefined },
+    { icon: soundOn ? Volume2 : VolumeX, action: () => setSoundOn(p => !p) },
     { icon: CircleHelp, action: undefined },
     { icon: History, action: undefined },
     { icon: BarChart3, action: undefined },
