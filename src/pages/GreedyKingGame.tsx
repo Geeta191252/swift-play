@@ -36,6 +36,7 @@ const GreedyKingGame = () => {
   const [starBalance, setStarBalance] = useState(3200);
   const [todayProfits, setTodayProfits] = useState(0);
   const [activeWallet, setActiveWallet] = useState<"dollar" | "star">("dollar");
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [selectedBet, setSelectedBet] = useState(10);
   const [userBets, setUserBets] = useState<number[]>(() => FOOD_ITEMS.map(() => 0));
   const [phase, setPhase] = useState<GamePhase>("betting");
@@ -207,7 +208,7 @@ const GreedyKingGame = () => {
   const topBarItems = [
     { icon: Home, action: () => navigate("/") },
     { icon: soundOn ? Volume2 : VolumeX, action: () => setSoundOn(p => !p) },
-    { icon: Trophy, action: undefined },
+    { icon: Trophy, action: () => setShowLeaderboard(true) },
   ];
 
   return (
@@ -564,6 +565,72 @@ const GreedyKingGame = () => {
                 );
               })()}
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Leaderboard Modal */}
+      <AnimatePresence>
+        {showLeaderboard && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center px-4"
+            style={{ background: "hsla(0, 0%, 0%, 0.6)" }}
+            onClick={() => setShowLeaderboard(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.8, y: 40 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.8, y: 40 }}
+              className="w-full max-w-sm rounded-2xl p-4"
+              style={{ background: "hsl(0, 0%, 100%)" }}
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-bold flex items-center gap-2" style={{ color: "hsl(0, 0%, 15%)" }}>
+                  🏆 Leaderboard
+                </h2>
+                <button onClick={() => setShowLeaderboard(false)}>
+                  <X className="h-5 w-5" style={{ color: "hsl(0, 0%, 50%)" }} />
+                </button>
+              </div>
+
+              {(() => {
+                const players = [
+                  ...FAKE_PLAYERS.map(p => ({
+                    name: p.name,
+                    wallet: p.wallet,
+                    amount: Math.floor(Math.random() * 800) + 100,
+                  })),
+                  { name: "You", wallet: activeWallet, amount: todayProfits > 0 ? todayProfits : 0 },
+                ];
+                players.sort((a, b) => b.amount - a.amount);
+
+                return (
+                  <div className="space-y-2">
+                    {players.map((p, i) => (
+                      <div key={i} className="flex items-center gap-3 rounded-xl px-3 py-2.5"
+                        style={{
+                          background: p.name === "You" ? "hsl(45, 80%, 92%)" : "hsl(0, 0%, 96%)",
+                          border: p.name === "You" ? "2px solid hsl(45, 80%, 60%)" : "none",
+                        }}>
+                        <span className="w-6 text-center font-bold text-sm" style={{
+                          color: i === 0 ? "hsl(50, 90%, 45%)" : i === 1 ? "hsl(210, 60%, 50%)" : i === 2 ? "hsl(25, 70%, 50%)" : "hsl(0, 0%, 50%)"
+                        }}>
+                          {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}`}
+                        </span>
+                        <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ background: "hsl(210, 20%, 88%)" }}>
+                          <span className="text-lg">{p.name === "You" ? "🙋" : "👤"}</span>
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-semibold" style={{ color: "hsl(0, 0%, 15%)" }}>{p.name}</p>
+                        </div>
+                        <span className="text-sm">{p.wallet === "dollar" ? "💲" : "⭐"}</span>
+                        <span className="font-bold text-sm" style={{ color: "hsl(35, 90%, 40%)" }}>{p.amount}</span>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
