@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { ChevronRight, Diamond, Plus, ShoppingCart, User } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import BottomNav from "./BottomNav";
 
 import gameLogo from "@/assets/game-logo.jpg";
@@ -16,14 +17,16 @@ interface GameTileProps {
   badge?: string;
   badgeColor?: string;
   delay?: number;
+  onClick?: () => void;
 }
 
-const GameTile = ({ image, name, description, badge, badgeColor = "bg-green-500", delay = 0 }: GameTileProps) => (
+const GameTile = ({ image, name, description, badge, badgeColor = "bg-green-500", delay = 0, onClick }: GameTileProps) => (
   <motion.div
     initial={{ opacity: 0, y: 16 }}
     animate={{ opacity: 1, y: 0 }}
     transition={{ delay, duration: 0.3 }}
     whileTap={{ scale: 0.95 }}
+    onClick={onClick}
     className="cursor-pointer flex-shrink-0 w-[140px]"
   >
     <div className="relative rounded-2xl overflow-hidden aspect-square mb-2">
@@ -40,6 +43,8 @@ const GameTile = ({ image, name, description, badge, badgeColor = "bg-green-500"
 );
 
 const HomeScreen = () => {
+  const navigate = useNavigate();
+  const goToGreedyKing = () => navigate("/greedy-king");
   return (
     <div className="min-h-screen bg-background pb-20">
       {/* Top Bar */}
@@ -100,6 +105,7 @@ const HomeScreen = () => {
               badge="Wheel"
               badgeColor="bg-zinc-800"
               delay={0.1}
+              onClick={goToGreedyKing}
             />
           </div>
         </section>
@@ -114,7 +120,7 @@ const HomeScreen = () => {
           </div>
           <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
             <GameTile image={gameGreedyLion} name="Greedy Lion" description="Spin to win 45" badge="New" delay={0.1} />
-            <GameTile image={gameLogo} name="Greedy King" description="Win more than FruitMachine" delay={0.15} />
+            <GameTile image={gameLogo} name="Greedy King" description="Win more than FruitMachine" delay={0.15} onClick={goToGreedyKing} />
             <GameTile image={gameFruitMachine} name="FruitMachine" description="Spin to win!" badge="TOP" badgeColor="bg-orange-500" delay={0.2} />
           </div>
         </section>
