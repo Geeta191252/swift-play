@@ -2,7 +2,8 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowDownLeft, ArrowUpRight, DollarSign, Star } from "lucide-react";
 import { Button } from "./ui/button";
-
+import { toast } from "@/hooks/use-toast";
+import { isTelegramMiniApp, initiatePayment, type CurrencyType, type ActionType } from "@/lib/telegram";
 const transactions = [
   { type: "win", game: "Greedy King", amount: "+250", currency: "💲", time: "2 min ago" },
   { type: "bet", game: "Greedy King", amount: "-100", currency: "💲", time: "5 min ago" },
@@ -56,15 +57,48 @@ const WalletScreen = () => {
   const [depositMenu, setDepositMenu] = useState(false);
   const [withdrawMenu, setWithdrawMenu] = useState(false);
 
-  const handleDeposit = (currency: CurrencyOption) => {
-    setDepositMenu(false);
-    // TODO: open deposit flow for selected currency
+  const [loading, setLoading] = useState(false);
+
+  const handleAction = async (action: ActionType, currency: CurrencyOption) => {
+    if (action === "deposit") setDepositMenu(false);
+    else setWithdrawMenu(false);
+
+    if (!isTelegramMiniApp()) {
+      toast({
+        title: "Telegram Required",
+        description: "Please open this app inside Telegram to use wallet features.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Default amounts - you can add an amount picker UI later
+    const amount = currency === "dollar" ? 1 : 100; // $1 or 100 stars
+
+    setLoading(true);
+    try {
+      await initiatePayment(action, currency as CurrencyType, amount, (status) => {
+        setLoading(false);
+        if (status === "paid") {
+          toast({
+            title: "Success! ✅",
+            description: `${action === "deposit" ? "Deposit" : "Withdrawal"} of ${currency === "dollar" ? "$" + amount : amount + " ⭐"} completed!`,
+          });
+          // TODO: refresh balances from your Koyeb backend
+        } else if (status === "cancelled") {
+          toast({ title: "Cancelled", description: "Payment was cancelled." });
+        } else {
+          toast({ title: "Failed", description: "Payment failed. Try again.", variant: "destructive" });
+        }
+      });
+    } catch {
+      setLoading(false);
+      toast({ title: "Error", description: "Could not connect to server.", variant: "destructive" });
+    }
   };
 
-  const handleWithdraw = (currency: CurrencyOption) => {
-    setWithdrawMenu(false);
-    // TODO: open withdraw flow for selected currency
-  };
+  const handleDeposit = (currency: CurrencyOption) => handleAction("deposit", currency);
+  const handleWithdraw = (currency: CurrencyOption) => handleAction("withdraw", currency);
 
   return (
     <div className="px-4 pt-4 space-y-5">

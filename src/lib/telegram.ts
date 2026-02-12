@@ -1,0 +1,123 @@
+// Telegram WebApp API helper for Mini App environment
+
+declare global {
+  interface Window {
+    Telegram?: {
+      WebApp: TelegramWebApp;
+    };
+  }
+}
+
+interface TelegramWebApp {
+  initData: string;
+  initDataUnsafe: {
+    user?: {
+      id: number;
+      first_name: string;
+      last_name?: string;
+      username?: string;
+    };
+  };
+  ready: () => void;
+  close: () => void;
+  expand: () => void;
+  openInvoice: (url: string, callback?: (status: string) => void) => void;
+  showAlert: (message: string, callback?: () => void) => void;
+  showConfirm: (message: string, callback?: (confirmed: boolean) => void) => void;
+  showPopup: (params: {
+    title?: string;
+    message: string;
+    buttons?: Array<{ id?: string; type?: string; text?: string }>;
+  }, callback?: (buttonId: string) => void) => void;
+  platform: string;
+  version: string;
+}
+
+export const getTelegram = (): TelegramWebApp | null => {
+  return window.Telegram?.WebApp || null;
+};
+
+export const isTelegramMiniApp = (): boolean => {
+  return !!window.Telegram?.WebApp?.initData;
+};
+
+export const getTelegramUser = () => {
+  return window.Telegram?.WebApp?.initDataUnsafe?.user || null;
+};
+
+// Backend API base URL - change this to your Koyeb deployment URL
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://your-koyeb-app.koyeb.app/api";
+
+export type CurrencyType = "dollar" | "star";
+export type ActionType = "deposit" | "withdraw";
+
+interface InvoiceResponse {
+  invoiceUrl: string;
+}
+
+/**
+ * Request an invoice URL from your Koyeb backend
+ * Backend should create a Telegram payment invoice via Bot API
+ */
+export const requestInvoice = async (
+  action: ActionType,
+  currency: CurrencyType,
+  amount: number
+): Promise<string> => {
+  const tg = getTelegram();
+  const userId = tg?.initDataUnsafe?.user?.id;
+
+  const res = await fetch(`${API_BASE_URL}/${action}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      userId,
+      currency,
+      amount,
+      initData: tg?.initData, // for server-side validation
+    }),
+  });
+
+  if (!res.ok) {
+    throw new Error(`Failed to create ${action} invoice`);
+  }
+
+  const data: InvoiceResponse = await res.json();
+  return data.invoiceUrl;
+};
+
+/**
+ * Open Telegram payment invoice
+ */
+export const openTelegramInvoice = (
+  invoiceUrl: string,
+  onResult: (status: "paid" | "cancelled" | "failed" | "pending") => void
+) => {
+  const tg = getTelegram();
+  if (!tg) {
+    console.error("Not running inside Telegram Mini App");
+    return;
+  }
+
+  tg.openInvoice(invoiceUrl, (status) => {
+    onResult(status as "paid" | "cancelled" | "failed" | "pending");
+  });
+};
+
+/**
+ * Combined: request invoice from backend + open in Telegram
+ */
+export const initiatePayment = async (
+  action: ActionType,
+  currency: CurrencyType,
+  amount: number,
+  onResult: (status: string) => void
+) => {
+  try {
+    const invoiceUrl = await requestInvoice(action, currency, amount);
+    openTelegramInvoice(invoiceUrl, onResult);
+  } catch (error) {
+    console.error("Payment error:", error);
+    throw error;
+  }
+};
