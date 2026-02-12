@@ -46,7 +46,7 @@ export const getTelegramUser = () => {
 };
 
 // Backend API base URL - change this to your Koyeb deployment URL
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://teenage-blondie-chetan1-3c9842f1.koyeb.app/api";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://broken-bria-chetan1-ea890b93.koyeb.app/api";
 
 export type CurrencyType = "dollar" | "star";
 export type ActionType = "deposit" | "withdraw";
