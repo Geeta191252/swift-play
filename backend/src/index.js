@@ -57,8 +57,6 @@ app.post("/api/deposit", async (req, res) => {
       const invoice = await bot.createInvoiceLink({
         title: `Deposit ${amount} Stars`,
         description: `Add ${amount} Stars to your wallet`,
-        title: `Deposit ${amount} Stars`,
-        description: `Add ${amount} Stars to your wallet`,
         payload: JSON.stringify({ action: "deposit", currency: "star", userId, amount }),
         provider_token: "", // Empty for Telegram Stars
         currency: "XTR", // XTR = Telegram Stars
