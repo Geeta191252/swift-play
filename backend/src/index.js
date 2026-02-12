@@ -1,6 +1,7 @@
 require("dotenv").config();
 const express = require("express");
 const path = require("path");
+const fs = require("fs");
 const cors = require("cors");
 const mongoose = require("mongoose");
 const TelegramBot = require("node-telegram-bot-api");
@@ -186,9 +187,22 @@ app.post("/api/transactions", async (req, res) => {
 // ============================================
 app.use(express.static(path.join(__dirname, "../public")));
 
+// Debug: check if frontend files exist
+app.get("/api/debug", (req, res) => {
+  const publicDir = path.join(__dirname, "../public");
+  try {
+    const exists = fs.existsSync(publicDir);
+    const files = exists ? fs.readdirSync(publicDir) : [];
+    const indexExists = fs.existsSync(path.join(publicDir, "index.html"));
+    res.json({ publicDir, exists, files, indexExists, dirname: __dirname });
+  } catch (err) {
+    res.json({ error: err.message, dirname: __dirname });
+  }
+});
+
 // Health check API
 app.get("/api/health", (req, res) => {
-  res.json({ status: "ok", service: "telegram-wallet-backend" });
+  res.json({ status: "ok", service: "telegram-wallet-backend", version: "2.0" });
 });
 
 // ============================================
