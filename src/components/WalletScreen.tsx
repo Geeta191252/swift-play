@@ -102,9 +102,10 @@ const WalletScreen = () => {
           toast({ title: "Failed", description: "Payment failed. Try again.", variant: "destructive" });
         }
       });
-    } catch {
+    } catch (err: any) {
       setLoading(false);
-      toast({ title: "Error", description: "Could not connect to server.", variant: "destructive" });
+      const message = err?.message || "Could not connect to server.";
+      toast({ title: "Error", description: message, variant: "destructive" });
     }
   };
 
