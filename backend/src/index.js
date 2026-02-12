@@ -243,7 +243,7 @@ app.post("/api/telegram-webhook", async (req, res) => {
             [
               {
                 text: "🎮 Play Now",
-                web_app: { url: "https://teenage-blondie-chetan1-3c9842f1.koyeb.app" },
+                web_app: { url: process.env.WEBAPP_URL || "https://id-preview--a92fa242-5d3a-4f40-9510-df05c96888c2.lovable.app" },
               },
             ],
           ],
