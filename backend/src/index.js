@@ -178,7 +178,12 @@ app.post("/api/transactions", async (req, res) => {
     const { userId } = req.body;
     if (!userId) return res.status(400).json({ error: "Missing userId" });
 
-    const transactions = await Transaction.find({ telegramId: userId })
+    const numericId = Number(userId);
+    if (!numericId || isNaN(numericId)) {
+      return res.json({ transactions: [] });
+    }
+
+    const transactions = await Transaction.find({ telegramId: numericId })
       .sort({ createdAt: -1 })
       .limit(20);
 
