@@ -73,10 +73,6 @@ const HomeScreen = () => {
             <span className="text-[10px]">⭐</span>
             <span className="font-bold text-[10px] text-foreground">Star 0</span>
           </div>
-          <div className="flex items-center gap-1 bg-card rounded-full px-2 py-1 shrink-0">
-            <span className="text-[10px]">🎁</span>
-            <span className="font-bold text-[10px] text-foreground">Star Bonus 0</span>
-          </div>
         </div>
         <div className="flex items-center gap-3">
           <div className="h-9 w-9 rounded-xl bg-primary/20 flex items-center justify-center">
