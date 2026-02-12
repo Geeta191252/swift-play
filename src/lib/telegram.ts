@@ -96,8 +96,7 @@ export const openTelegramInvoice = (
 ) => {
   const tg = getTelegram();
   if (!tg) {
-    console.error("Not running inside Telegram Mini App");
-    return;
+    throw new Error("Please open this app inside Telegram to make payments.");
   }
 
   tg.openInvoice(invoiceUrl, (status) => {
