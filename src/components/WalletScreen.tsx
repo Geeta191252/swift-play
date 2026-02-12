@@ -169,34 +169,42 @@ const WalletScreen = () => {
       <div>
         <h3 className="font-semibold text-foreground text-sm mb-3">Recent Transactions</h3>
         <div className="space-y-2">
-          {transactions.map((tx, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, x: -16 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: i * 0.06 }}
-              className="flex items-center gap-3 bg-card border border-border rounded-2xl p-3"
-            >
-              <div className={`h-9 w-9 rounded-xl flex items-center justify-center ${
-                tx.type === "win" || tx.type === "bonus" ? "bg-green-500/20" : "bg-red-500/20"
-              }`}>
-                {tx.type === "win" || tx.type === "bonus" ? (
-                  <ArrowDownLeft className="h-4 w-4 text-green-500" />
-                ) : (
-                  <ArrowUpRight className="h-4 w-4 text-red-500" />
-                )}
-              </div>
-              <div className="flex-1">
-                <h4 className="font-semibold text-sm text-foreground">{tx.game}</h4>
-                <p className="text-xs text-muted-foreground">{tx.time}</p>
-              </div>
-              <span className={`text-sm font-bold ${
-                tx.amount.startsWith("+") ? "text-green-500" : "text-red-500"
-              }`}>
-                {tx.currency} {tx.amount}
-              </span>
-            </motion.div>
-          ))}
+          {transactions.map((tx: any, i: number) => {
+            const isPositive = tx.type === "win" || tx.type === "bonus" || tx.type === "deposit";
+            const amountStr = String(tx.amount);
+            const displayAmount = amountStr.startsWith("+") || amountStr.startsWith("-")
+              ? amountStr
+              : (isPositive ? "+" : "-") + amountStr;
+            const currencySymbol = tx.currency === "dollar" || tx.currency === "💲" ? "💲" : "⭐";
+            const timeDisplay = tx.time || (tx.createdAt ? new Date(tx.createdAt).toLocaleString() : "");
+
+            return (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, x: -16 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.06 }}
+                className="flex items-center gap-3 bg-card border border-border rounded-2xl p-3"
+              >
+                <div className={`h-9 w-9 rounded-xl flex items-center justify-center ${
+                  isPositive ? "bg-green-500/20" : "bg-red-500/20"
+                }`}>
+                  {isPositive ? (
+                    <ArrowDownLeft className="h-4 w-4 text-green-500" />
+                  ) : (
+                    <ArrowUpRight className="h-4 w-4 text-red-500" />
+                  )}
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-semibold text-sm text-foreground">{tx.game || tx.description || tx.type}</h4>
+                  <p className="text-xs text-muted-foreground">{timeDisplay}</p>
+                </div>
+                <span className={`text-sm font-bold ${isPositive ? "text-green-500" : "text-red-500"}`}>
+                  {currencySymbol} {displayAmount}
+                </span>
+              </motion.div>
+            );
+          })}
         </div>
       </div>
 
