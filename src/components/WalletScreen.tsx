@@ -191,7 +191,7 @@ const WalletScreen = () => {
       <div className="grid grid-cols-2 gap-3">
         <Button
           variant="outline"
-          className="rounded-xl h-12 w-full border-green-500/30 text-green-500 hover:bg-green-500/10"
+          className="rounded-xl h-14 w-full border-green-500/30 text-green-500 hover:bg-green-500/10 flex flex-col items-center justify-center gap-0.5"
           onClick={() => {
             if (dollarBalance < 10) {
               toast({ title: "Minimum $10", description: "You need at least $10 in winnings to withdraw.", variant: "destructive" });
@@ -200,17 +200,23 @@ const WalletScreen = () => {
             handleCurrencySelect("withdraw", "dollar");
           }}
         >
-          <DollarSign className="h-4 w-4 mr-1" /> Winning Withdraw
+          <span className="flex items-center text-xs">
+            <DollarSign className="h-3.5 w-3.5 mr-0.5" /> Winning Withdraw
+          </span>
+          <span className="text-sm font-bold">${dollarBalance.toFixed(2)}</span>
         </Button>
         <Button
           variant="outline"
-          className="rounded-xl h-12 w-full border-yellow-500/30 text-yellow-500 hover:bg-yellow-500/10"
+          className="rounded-xl h-14 w-full border-yellow-500/30 text-yellow-500 hover:bg-yellow-500/10 flex flex-col items-center justify-center gap-0.5"
           onClick={() => {
             const el = document.getElementById("star-converter");
             el?.scrollIntoView({ behavior: "smooth" });
           }}
         >
-          <Star className="h-4 w-4 mr-1" /> Star Convert
+          <span className="flex items-center text-xs">
+            <Star className="h-3.5 w-3.5 mr-0.5" /> Star Convert
+          </span>
+          <span className="text-sm font-bold">⭐ {starBalance.toLocaleString()}</span>
         </Button>
       </div>
 
