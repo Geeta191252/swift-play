@@ -166,7 +166,9 @@ export const fetchTransactions = async (): Promise<Array<{
     throw new Error("Failed to fetch transactions");
   }
 
-  return res.json();
+  const data = await res.json();
+  // Backend returns { transactions: [...] }, extract the array
+  return data.transactions || data;
 };
 
 /**
