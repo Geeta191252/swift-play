@@ -29,10 +29,16 @@ const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: false });
 // HELPER: Get or create user
 // ============================================
 async function getOrCreateUser(telegramUserId) {
-  let user = await User.findOne({ telegramId: telegramUserId });
+  // Convert to number; use 0 as fallback for "demo" or invalid values
+  const numericId = Number(telegramUserId);
+  if (!numericId || isNaN(numericId)) {
+    // Return a default demo user object without DB
+    return { telegramId: 0, dollarBalance: 0, starBalance: 0, save: async () => {} };
+  }
+  let user = await User.findOne({ telegramId: numericId });
   if (!user) {
     user = await User.create({
-      telegramId: telegramUserId,
+      telegramId: numericId,
       dollarBalance: 0,
       starBalance: 0,
     });
