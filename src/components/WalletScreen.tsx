@@ -203,11 +203,10 @@ const WalletScreen = () => {
           <Button
             variant="outline"
             className="rounded-xl h-12 w-full"
-            onClick={() => { setWithdrawMenu(!withdrawMenu); setDepositMenu(false); }}
+            onClick={() => handleCurrencySelect("withdraw", "dollar")}
           >
             <ArrowUpRight className="h-4 w-4 mr-2" /> Withdraw
           </Button>
-          <CurrencyMenu show={withdrawMenu} onSelect={handleWithdraw} onClose={() => setWithdrawMenu(false)} />
         </div>
       </div>
 
