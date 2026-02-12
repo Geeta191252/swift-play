@@ -64,10 +64,19 @@ const HomeScreen = () => {
     <div className="min-h-screen bg-background pb-20">
       {/* Top Bar */}
       <div className="sticky top-0 z-30 bg-background/90 backdrop-blur-md px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-2 bg-card rounded-full px-3 py-1.5">
-          <Diamond className="h-4 w-4 text-primary" />
-          <span className="font-bold text-sm text-foreground">7.57K</span>
-          <Plus className="h-3.5 w-3.5 text-muted-foreground" />
+        <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1 bg-card rounded-full px-2.5 py-1">
+            <span className="text-xs">💲</span>
+            <span className="font-bold text-xs text-foreground">0.00</span>
+          </div>
+          <div className="flex items-center gap-1 bg-card rounded-full px-2.5 py-1">
+            <span className="text-xs">⭐</span>
+            <span className="font-bold text-xs text-foreground">0</span>
+          </div>
+          <div className="flex items-center gap-1 bg-card rounded-full px-2.5 py-1">
+            <span className="text-xs">🎁</span>
+            <span className="font-bold text-xs text-foreground">0</span>
+          </div>
         </div>
         <div className="flex items-center gap-3">
           <div className="h-9 w-9 rounded-xl bg-primary/20 flex items-center justify-center">
