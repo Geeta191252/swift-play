@@ -71,7 +71,7 @@ const FriendsScreen = () => {
       </div>
 
       <p className="text-xs text-muted-foreground text-center px-2">
-        📌 Note: 3rd refer ke baad, har refer par aapko 3 ⭐ milenge!
+        📌 Note: After the 3rd referral, you will earn 3 ⭐ for every referral!
       </p>
     </div>
   );
