@@ -60,6 +60,8 @@ const EarnScreen = () => {
       <div className="text-xs text-muted-foreground text-center px-2 space-y-1">
         <p>📌 1 ad dekhne par 1 ⭐ milega, 10 ads dekhne par 10 ⭐ milenge!</p>
         <p>📌 Watch 1 ad to earn 1 ⭐, watch 10 ads to earn 10 ⭐!</p>
+        <p>💰 Ads se milne wale stars aapke Star Bonus wallet mein add honge.</p>
+        <p>💰 Stars earned from ads will be added to your Star Bonus wallet.</p>
       </div>
     </div>
   );

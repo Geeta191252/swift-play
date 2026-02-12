@@ -73,6 +73,8 @@ const FriendsScreen = () => {
       <div className="text-xs text-muted-foreground text-center px-2 space-y-1">
         <p>📌 Note: 3rd refer ke baad, har refer par aapko 3 ⭐ milenge!</p>
         <p>📌 Note: After the 3rd referral, you will earn 3 ⭐ for every referral!</p>
+        <p>💰 Refer se milne wale stars aapke Star Bonus wallet mein add honge.</p>
+        <p>💰 Stars earned from referrals will be added to your Star Bonus wallet.</p>
       </div>
     </div>
   );
