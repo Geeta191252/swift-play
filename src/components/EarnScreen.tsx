@@ -2,11 +2,12 @@ import { motion } from "framer-motion";
 import { Gift, Star, CheckCircle, Clock } from "lucide-react";
 
 const tasks = [
-  { icon: Gift, title: "Daily Login Bonus", reward: "💎 50", done: true },
-  { icon: Star, title: "Play 3 Games", reward: "💎 100", done: false, progress: "1/3" },
-  { icon: CheckCircle, title: "Invite a Friend", reward: "💎 200", done: false },
-  { icon: Clock, title: "Watch 3 Ads", reward: "💎 30", done: false, progress: "0/3" },
-  { icon: Star, title: "Win 5 Rounds", reward: "💎 150", done: false, progress: "2/5" },
+  { icon: Gift, title: "Daily Login Bonus", reward: "⭐ 5", done: true },
+  { icon: Star, title: "Play 3 Games", reward: "⭐ 10", done: false, progress: "1/3", percent: 33 },
+  { icon: CheckCircle, title: "Get 5 Friends", reward: "⭐ 15", done: false, progress: "3/5", percent: 60 },
+  { icon: Clock, title: "Watch an ad today 1/3 📺", reward: "⭐ 5", done: false, progress: "0/3", percent: 0 },
+  { icon: Clock, title: "Watch an ad today 2/3 📺", reward: "⭐ 10", done: false, progress: "1/3", percent: 33 },
+  { icon: Clock, title: "Watch an ad today 3/3 📺", reward: "⭐ 15", done: false, progress: "2/3", percent: 66 },
 ];
 
 const EarnScreen = () => {
@@ -36,7 +37,12 @@ const EarnScreen = () => {
                 {task.title}
               </h4>
               {task.progress && !task.done && (
-                <p className="text-xs text-muted-foreground">{task.progress}</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-xs text-primary font-semibold">{task.percent}%</span>
+                  <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                    <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${task.percent}%` }} />
+                  </div>
+                </div>
               )}
             </div>
             <span className={`text-sm font-bold ${task.done ? "text-primary/50" : "text-primary"}`}>
