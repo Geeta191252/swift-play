@@ -1,5 +1,6 @@
 require("dotenv").config();
 const express = require("express");
+const path = require("path");
 const cors = require("cors");
 const mongoose = require("mongoose");
 const TelegramBot = require("node-telegram-bot-api");
@@ -181,9 +182,12 @@ app.post("/api/transactions", async (req, res) => {
 });
 
 // ============================================
-// Health check
+// Serve frontend static files
 // ============================================
-app.get("/", (req, res) => {
+app.use(express.static(path.join(__dirname, "../public")));
+
+// Health check API
+app.get("/api/health", (req, res) => {
   res.json({ status: "ok", service: "telegram-wallet-backend" });
 });
 
@@ -243,7 +247,7 @@ app.post("/api/telegram-webhook", async (req, res) => {
             [
               {
                 text: "🎮 Play Now",
-                web_app: { url: process.env.WEBAPP_URL || "https://id-preview--a92fa242-5d3a-4f40-9510-df05c96888c2.lovable.app" },
+                web_app: { url: process.env.WEBAPP_URL || process.env.KOYEB_URL || "https://teenage-blondie-chetan1-3c9842f1.koyeb.app" },
               },
             ],
           ],
@@ -291,6 +295,11 @@ app.post("/api/telegram-webhook", async (req, res) => {
     console.error("Webhook error:", error);
     res.sendStatus(200);
   }
+});
+
+// SPA fallback - serve index.html for all non-API routes
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "../public/index.html"));
 });
 
 // ============================================

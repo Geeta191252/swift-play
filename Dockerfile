@@ -1,6 +1,6 @@
 FROM node:18-alpine
 
-# Build frontend first
+# Build frontend
 WORKDIR /frontend
 COPY package.json ./
 RUN npm install
