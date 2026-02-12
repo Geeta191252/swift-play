@@ -181,11 +181,77 @@ app.post("/api/transactions", async (req, res) => {
 });
 
 // ============================================
-// Telegram Webhook - handles successful payments
+// Health check
+// ============================================
+app.get("/", (req, res) => {
+  res.json({ status: "ok", service: "telegram-wallet-backend" });
+});
+
+// ============================================
+// POST /api/game/result - Report game result
+// ============================================
+app.post("/api/game/result", async (req, res) => {
+  try {
+    const { userId, betAmount, winAmount, currency, game } = req.body;
+
+    if (!userId || betAmount === undefined || winAmount === undefined || !currency || !game) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    const user = await getOrCreateUser(userId);
+    const balanceField = currency === "dollar" ? "dollarBalance" : "starBalance";
+    const netAmount = winAmount - betAmount;
+
+    user[balanceField] += netAmount;
+    if (user[balanceField] < 0) user[balanceField] = 0;
+    await user.save();
+
+    await Transaction.create({
+      telegramId: userId,
+      type: netAmount >= 0 ? "win" : "loss",
+      currency,
+      amount: netAmount,
+      status: "completed",
+      description: `${game}: Bet ${betAmount}, Won ${winAmount}`,
+    });
+
+    return res.json({
+      dollarBalance: user.dollarBalance,
+      starBalance: user.starBalance,
+    });
+  } catch (error) {
+    console.error("Game result error:", error);
+    return res.status(500).json({ error: "Failed to process game result" });
+  }
+});
+
+// ============================================
+// Telegram Bot /start command via webhook
 // ============================================
 app.post("/api/telegram-webhook", async (req, res) => {
   try {
     const update = req.body;
+
+    // Handle /start command
+    if (update.message?.text === "/start") {
+      const chatId = update.message.chat.id;
+      const firstName = update.message.from.first_name || "Player";
+
+      await bot.sendMessage(chatId, `🎮 Welcome ${firstName} to Royal King Game!\n\nTap the button below to start playing!`, {
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "🎮 Play Now",
+                web_app: { url: "https://teenage-blondie-chetan1-3c9842f1.koyeb.app" },
+              },
+            ],
+          ],
+        },
+      });
+
+      return res.sendStatus(200);
+    }
 
     // Handle successful payment
     if (update.message?.successful_payment) {
@@ -202,7 +268,6 @@ app.post("/api/telegram-webhook", async (req, res) => {
       }
       await user.save();
 
-      // Log transaction
       await Transaction.create({
         telegramId: userId,
         type: "deposit",
@@ -216,7 +281,7 @@ app.post("/api/telegram-webhook", async (req, res) => {
       console.log(`✅ Payment received: ${amount} ${currency} for user ${userId}`);
     }
 
-    // Handle pre-checkout query (MUST respond within 10 seconds)
+    // Handle pre-checkout query
     if (update.pre_checkout_query) {
       await bot.answerPreCheckoutQuery(update.pre_checkout_query.id, true);
     }
@@ -224,15 +289,8 @@ app.post("/api/telegram-webhook", async (req, res) => {
     res.sendStatus(200);
   } catch (error) {
     console.error("Webhook error:", error);
-    res.sendStatus(200); // Always return 200 to Telegram
+    res.sendStatus(200);
   }
-});
-
-// ============================================
-// Health check
-// ============================================
-app.get("/", (req, res) => {
-  res.json({ status: "ok", service: "telegram-wallet-backend" });
 });
 
 // ============================================
@@ -241,7 +299,9 @@ app.get("/", (req, res) => {
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 
-  // Set Telegram webhook (uncomment after deploying to Koyeb)
-  // const KOYEB_URL = "https://your-app.koyeb.app";
-  // bot.setWebHook(`${KOYEB_URL}/api/telegram-webhook`);
+  // Set Telegram webhook automatically
+  const KOYEB_URL = process.env.KOYEB_URL || "https://teenage-blondie-chetan1-3c9842f1.koyeb.app";
+  bot.setWebHook(`${KOYEB_URL}/api/telegram-webhook`)
+    .then(() => console.log("✅ Webhook set successfully"))
+    .catch((err) => console.error("❌ Webhook error:", err));
 });
