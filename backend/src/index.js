@@ -54,14 +54,14 @@ app.post("/api/deposit", async (req, res) => {
 
     if (currency === "star") {
       // Telegram Stars payment via invoice
-      const invoice = await bot.createInvoiceLink({
-        title: `Deposit ${amount} Stars`,
-        description: `Add ${amount} Stars to your wallet`,
-        payload: JSON.stringify({ action: "deposit", currency: "star", userId, amount }),
-        provider_token: "", // Empty for Telegram Stars
-        currency: "XTR", // XTR = Telegram Stars
-        prices: [{ label: `${amount} Stars`, amount: amount }],
-      });
+      const invoice = await bot.createInvoiceLink(
+        `Deposit ${amount} Stars`,           // title
+        `Add ${amount} Stars to your wallet`, // description
+        JSON.stringify({ action: "deposit", currency: "star", userId, amount }), // payload
+        "",                                   // provider_token (empty for Stars)
+        "XTR",                                // currency
+        [{ label: `${amount} Stars`, amount: amount }] // prices
+      );
 
       return res.json({ invoiceUrl: invoice });
     }
