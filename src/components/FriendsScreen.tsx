@@ -5,8 +5,8 @@ import { toast } from "@/hooks/use-toast";
 
 const inviteTasks = [
   { title: "Invite 1st friend", reward: "2", icon: "⭐" },
-  { title: "Invite 2nd friend", reward: "2", icon: "⭐" },
-  { title: "Invite 3rd friend", reward: "$1", icon: "💵" },
+  { title: "Invite 2nd friend", reward: "3", icon: "⭐" },
+  { title: "Invite 3rd friend", reward: "3", icon: "⭐" },
 ];
 
 const FriendsScreen = () => {
@@ -69,6 +69,10 @@ const FriendsScreen = () => {
           </motion.div>
         ))}
       </div>
+
+      <p className="text-xs text-muted-foreground text-center px-2">
+        📌 Note: 3rd refer ke baad, har refer par aapko 3 ⭐ milenge!
+      </p>
     </div>
   );
 };
