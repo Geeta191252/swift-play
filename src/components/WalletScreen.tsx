@@ -1,4 +1,5 @@
-import { motion } from "framer-motion";
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { ArrowDownLeft, ArrowUpRight, DollarSign, Star } from "lucide-react";
 import { Button } from "./ui/button";
 
@@ -10,7 +11,61 @@ const transactions = [
   { type: "bet", game: "Dice Master", amount: "-200", currency: "⭐", time: "5 hr ago" },
 ];
 
+type CurrencyOption = "dollar" | "star";
+
+interface CurrencyMenuProps {
+  show: boolean;
+  onSelect: (currency: CurrencyOption) => void;
+  onClose: () => void;
+}
+
+const CurrencyMenu = ({ show, onSelect, onClose }: CurrencyMenuProps) => (
+  <AnimatePresence>
+    {show && (
+      <>
+        <div className="fixed inset-0 z-40" onClick={onClose} />
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.15 }}
+          className="absolute top-full mt-2 left-0 right-0 z-50 bg-card border border-border rounded-xl shadow-lg overflow-hidden"
+        >
+          <button
+            onClick={() => onSelect("dollar")}
+            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/50 transition-colors"
+          >
+            <span className="text-lg">💲</span>
+            <span className="font-semibold text-sm text-foreground">Dollar ($)</span>
+          </button>
+          <div className="h-px bg-border" />
+          <button
+            onClick={() => onSelect("star")}
+            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/50 transition-colors"
+          >
+            <span className="text-lg">⭐</span>
+            <span className="font-semibold text-sm text-foreground">Star (⭐)</span>
+          </button>
+        </motion.div>
+      </>
+    )}
+  </AnimatePresence>
+);
+
 const WalletScreen = () => {
+  const [depositMenu, setDepositMenu] = useState(false);
+  const [withdrawMenu, setWithdrawMenu] = useState(false);
+
+  const handleDeposit = (currency: CurrencyOption) => {
+    setDepositMenu(false);
+    // TODO: open deposit flow for selected currency
+  };
+
+  const handleWithdraw = (currency: CurrencyOption) => {
+    setWithdrawMenu(false);
+    // TODO: open withdraw flow for selected currency
+  };
+
   return (
     <div className="px-4 pt-4 space-y-5">
       <h2 className="font-bold text-xl text-foreground">Wallet</h2>
@@ -42,12 +97,26 @@ const WalletScreen = () => {
 
       {/* Actions */}
       <div className="grid grid-cols-2 gap-3">
-        <Button variant="outline" className="rounded-xl h-12">
-          <ArrowDownLeft className="h-4 w-4 mr-2" /> Deposit
-        </Button>
-        <Button variant="outline" className="rounded-xl h-12">
-          <ArrowUpRight className="h-4 w-4 mr-2" /> Withdraw
-        </Button>
+        <div className="relative">
+          <Button
+            variant="outline"
+            className="rounded-xl h-12 w-full"
+            onClick={() => { setDepositMenu(!depositMenu); setWithdrawMenu(false); }}
+          >
+            <ArrowDownLeft className="h-4 w-4 mr-2" /> Deposit
+          </Button>
+          <CurrencyMenu show={depositMenu} onSelect={handleDeposit} onClose={() => setDepositMenu(false)} />
+        </div>
+        <div className="relative">
+          <Button
+            variant="outline"
+            className="rounded-xl h-12 w-full"
+            onClick={() => { setWithdrawMenu(!withdrawMenu); setDepositMenu(false); }}
+          >
+            <ArrowUpRight className="h-4 w-4 mr-2" /> Withdraw
+          </Button>
+          <CurrencyMenu show={withdrawMenu} onSelect={handleWithdraw} onClose={() => setWithdrawMenu(false)} />
+        </div>
       </div>
 
       {/* Transactions */}
