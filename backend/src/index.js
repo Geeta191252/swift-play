@@ -261,7 +261,7 @@ app.post("/api/telegram-webhook", async (req, res) => {
             [
               {
                 text: "🎮 Play Now",
-                web_app: { url: process.env.WEBAPP_URL || process.env.KOYEB_URL || "https://teenage-blondie-chetan1-3c9842f1.koyeb.app" },
+                web_app: { url: process.env.WEBAPP_URL || process.env.KOYEB_URL || "https://broken-bria-chetan1-ea890b93.koyeb.app" },
               },
             ],
           ],
@@ -323,7 +323,7 @@ app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 
   // Set Telegram webhook automatically
-  const KOYEB_URL = process.env.KOYEB_URL || "https://teenage-blondie-chetan1-3c9842f1.koyeb.app";
+  const KOYEB_URL = process.env.KOYEB_URL || "https://broken-bria-chetan1-ea890b93.koyeb.app";
   bot.setWebHook(`${KOYEB_URL}/api/telegram-webhook`)
     .then(() => console.log("✅ Webhook set successfully"))
     .catch((err) => console.error("❌ Webhook error:", err));
