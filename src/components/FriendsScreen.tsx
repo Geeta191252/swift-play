@@ -4,9 +4,9 @@ import { Button } from "./ui/button";
 import { toast } from "@/hooks/use-toast";
 
 const inviteTasks = [
-  { title: "Invite 1st friend", reward: "$0.50" },
-  { title: "Invite 2nd friend", reward: "$0.50" },
-  { title: "Invite 3rd friend", reward: "$1" },
+  { title: "Invite 1st friend", reward: "2", icon: "⭐" },
+  { title: "Invite 2nd friend", reward: "2", icon: "⭐" },
+  { title: "Invite 3rd friend", reward: "$1", icon: "💵" },
 ];
 
 const FriendsScreen = () => {
@@ -65,7 +65,7 @@ const FriendsScreen = () => {
               <h4 className="font-bold text-sm text-foreground">{task.title}</h4>
             </div>
             <span className="text-xl font-bold text-foreground shrink-0">{task.reward}</span>
-            <span className="text-lg shrink-0">💵</span>
+            <span className="text-lg shrink-0">{task.icon}</span>
           </motion.div>
         ))}
       </div>
