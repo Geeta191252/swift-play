@@ -79,12 +79,12 @@ export const requestInvoice = async (
     }),
   });
 
+  const data = await res.json();
   if (!res.ok) {
-    throw new Error(`Failed to create ${action} invoice`);
+    throw new Error(data?.error || `Failed to create ${action} invoice`);
   }
 
-  const data: InvoiceResponse = await res.json();
-  return data.invoiceUrl;
+  return (data as InvoiceResponse).invoiceUrl;
 };
 
 /**
