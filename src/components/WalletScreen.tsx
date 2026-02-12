@@ -214,7 +214,7 @@ const WalletScreen = () => {
           }}
         >
           <span className="flex items-center text-xs">
-            <Star className="h-3.5 w-3.5 mr-0.5" /> Star Convert
+            <Star className="h-3.5 w-3.5 mr-0.5" /> Winning Star Convert
           </span>
           <span className="text-sm font-bold">⭐ {starBalance.toLocaleString()}</span>
         </Button>
