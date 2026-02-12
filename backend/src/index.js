@@ -89,8 +89,9 @@ app.post("/api/deposit", async (req, res) => {
 
     return res.status(400).json({ error: "Invalid currency. Use 'dollar' or 'star'" });
   } catch (error) {
-    console.error("Deposit error:", error);
-    return res.status(500).json({ error: "Failed to create invoice" });
+    console.error("Deposit error:", error?.response?.body || error.message || error);
+    const msg = error?.response?.body?.description || error.message || "Failed to create invoice";
+    return res.status(500).json({ error: msg });
   }
 });
 
