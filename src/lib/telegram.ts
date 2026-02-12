@@ -129,8 +129,10 @@ export const fetchBalance = async (): Promise<{ dollarBalance: number; starBalan
   const tg = getTelegram();
   const userId = tg?.initDataUnsafe?.user?.id;
 
-  const res = await fetch(`${API_BASE_URL}/balance?userId=${userId || "demo"}`, {
+  const res = await fetch(`${API_BASE_URL}/balance`, {
+    method: "POST",
     headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ userId: userId || "demo" }),
   });
 
   if (!res.ok) {
@@ -153,8 +155,10 @@ export const fetchTransactions = async (): Promise<Array<{
   const tg = getTelegram();
   const userId = tg?.initDataUnsafe?.user?.id;
 
-  const res = await fetch(`${API_BASE_URL}/transactions?userId=${userId || "demo"}`, {
+  const res = await fetch(`${API_BASE_URL}/transactions`, {
+    method: "POST",
     headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ userId: userId || "demo" }),
   });
 
   if (!res.ok) {
