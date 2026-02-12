@@ -218,6 +218,53 @@ app.get("/api/health", (req, res) => {
 });
 
 // ============================================
+// GET /api/admin/stats - Owner stats (Stars earned, all transactions)
+// Only accessible with owner telegram ID
+// ============================================
+app.post("/api/admin/stats", async (req, res) => {
+  try {
+    const { ownerId } = req.body;
+    
+    // Only owner can access (your Telegram ID)
+    if (String(ownerId) !== "6965488457") {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
+
+    // Total Stars deposited by all users
+    const starDeposits = await Transaction.aggregate([
+      { $match: { type: "deposit", currency: "star", status: "completed" } },
+      { $group: { _id: null, totalStars: { $sum: "$amount" }, count: { $sum: 1 } } }
+    ]);
+
+    // Total Dollar deposits
+    const dollarDeposits = await Transaction.aggregate([
+      { $match: { type: "deposit", currency: "dollar", status: "completed" } },
+      { $group: { _id: null, totalDollars: { $sum: "$amount" }, count: { $sum: 1 } } }
+    ]);
+
+    // Recent transactions (all users)
+    const recentTransactions = await Transaction.find({ type: "deposit" })
+      .sort({ createdAt: -1 })
+      .limit(50);
+
+    // Total users
+    const totalUsers = await User.countDocuments();
+
+    return res.json({
+      totalStarsEarned: starDeposits[0]?.totalStars || 0,
+      starDepositCount: starDeposits[0]?.count || 0,
+      totalDollarsEarned: dollarDeposits[0]?.totalDollars || 0,
+      dollarDepositCount: dollarDeposits[0]?.count || 0,
+      totalUsers,
+      recentTransactions,
+    });
+  } catch (error) {
+    console.error("Admin stats error:", error);
+    return res.status(500).json({ error: "Failed to fetch stats" });
+  }
+});
+
+// ============================================
 // POST /api/game/result - Report game result
 // ============================================
 app.post("/api/game/result", async (req, res) => {
