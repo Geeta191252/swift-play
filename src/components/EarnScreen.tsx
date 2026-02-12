@@ -3,22 +3,22 @@ import clapperboardIcon from "@/assets/icon-clapperboard.png";
 
 const tasks = [
   {
-    title: "Watch an ad today 3/3 📺...",
-    subtitle: "Watch an ad and earn. It's that ...",
-    reward: 300,
-    progress: "3/3",
+    title: "Watch ads 1/5 📺",
+    subtitle: "Watch 5 ads and earn 5 ⭐",
+    reward: 5,
+    progress: "1/5",
   },
   {
-    title: "Watch an ad today 2/3 📺...",
-    subtitle: "Watch an ad and earn. It's that ...",
-    reward: 200,
-    progress: "2/3",
+    title: "Watch ads 5/10 📺",
+    subtitle: "Watch 10 ads and earn 5 ⭐",
+    reward: 5,
+    progress: "5/10",
   },
   {
-    title: "Watch an ad today 1/2 📺",
-    subtitle: "Watch an ad and earn reward. I...",
-    reward: 300,
-    progress: "1/2",
+    title: "Watch ads 10/15 📺",
+    subtitle: "Watch 15 ads and earn 5 ⭐",
+    reward: 5,
+    progress: "10/15",
   },
 ];
 
@@ -55,6 +55,11 @@ const EarnScreen = () => {
             <span className="text-lg shrink-0">⭐</span>
           </motion.div>
         ))}
+      </div>
+
+      <div className="text-xs text-muted-foreground text-center px-2 space-y-1">
+        <p>📌 1 ad dekhne par 1 ⭐ milega, 10 ads dekhne par 10 ⭐ milenge!</p>
+        <p>📌 Watch 1 ad to earn 1 ⭐, watch 10 ads to earn 10 ⭐!</p>
       </div>
     </div>
   );
