@@ -3,8 +3,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowDownLeft, ArrowUpRight, DollarSign, Star } from "lucide-react";
 import { Button } from "./ui/button";
 import { toast } from "@/hooks/use-toast";
-import { isTelegramMiniApp, initiatePayment, type CurrencyType, type ActionType } from "@/lib/telegram";
-const transactions = [
+import { useQuery } from "@tanstack/react-query";
+import { isTelegramMiniApp, initiatePayment, fetchTransactions, type CurrencyType, type ActionType } from "@/lib/telegram";
+import { useBalanceContext } from "@/contexts/BalanceContext";
+import AmountInputDialog from "./AmountInputDialog";
+
+const fallbackTransactions = [
   { type: "win", game: "Greedy King", amount: "+250", currency: "💲", time: "2 min ago" },
   { type: "bet", game: "Greedy King", amount: "-100", currency: "💲", time: "5 min ago" },
   { type: "win", game: "Lucky Slots", amount: "+80", currency: "⭐", time: "1 hr ago" },
@@ -56,12 +60,31 @@ const CurrencyMenu = ({ show, onSelect, onClose }: CurrencyMenuProps) => (
 const WalletScreen = () => {
   const [depositMenu, setDepositMenu] = useState(false);
   const [withdrawMenu, setWithdrawMenu] = useState(false);
-
   const [loading, setLoading] = useState(false);
+  const [amountDialog, setAmountDialog] = useState<{
+    open: boolean;
+    action: ActionType;
+    currency: CurrencyType;
+  }>({ open: false, action: "deposit", currency: "dollar" });
 
-  const handleAction = async (action: ActionType, currency: CurrencyOption) => {
+  const { dollarBalance, starBalance, refreshBalance } = useBalanceContext();
+
+  const { data: transactions = fallbackTransactions } = useQuery({
+    queryKey: ["transactions"],
+    queryFn: fetchTransactions,
+    placeholderData: fallbackTransactions,
+    retry: 1,
+  });
+
+  const handleCurrencySelect = (action: ActionType, currency: CurrencyType) => {
     if (action === "deposit") setDepositMenu(false);
     else setWithdrawMenu(false);
+    setAmountDialog({ open: true, action, currency });
+  };
+
+  const handleAmountConfirm = async (amount: number) => {
+    const { action, currency } = amountDialog;
+    setAmountDialog((prev) => ({ ...prev, open: false }));
 
     if (!isTelegramMiniApp()) {
       toast({
@@ -72,19 +95,16 @@ const WalletScreen = () => {
       return;
     }
 
-    // Default amounts - you can add an amount picker UI later
-    const amount = currency === "dollar" ? 1 : 100; // $1 or 100 stars
-
     setLoading(true);
     try {
-      await initiatePayment(action, currency as CurrencyType, amount, (status) => {
+      await initiatePayment(action, currency, amount, (status) => {
         setLoading(false);
         if (status === "paid") {
           toast({
             title: "Success! ✅",
             description: `${action === "deposit" ? "Deposit" : "Withdrawal"} of ${currency === "dollar" ? "$" + amount : amount + " ⭐"} completed!`,
           });
-          // TODO: refresh balances from your Koyeb backend
+          refreshBalance();
         } else if (status === "cancelled") {
           toast({ title: "Cancelled", description: "Payment was cancelled." });
         } else {
@@ -97,8 +117,8 @@ const WalletScreen = () => {
     }
   };
 
-  const handleDeposit = (currency: CurrencyOption) => handleAction("deposit", currency);
-  const handleWithdraw = (currency: CurrencyOption) => handleAction("withdraw", currency);
+  const handleDeposit = (currency: CurrencyOption) => handleCurrencySelect("deposit", currency as CurrencyType);
+  const handleWithdraw = (currency: CurrencyOption) => handleCurrencySelect("withdraw", currency as CurrencyType);
 
   return (
     <div className="px-4 pt-4 space-y-5">
@@ -114,7 +134,7 @@ const WalletScreen = () => {
           <div className="flex items-center gap-1.5 text-muted-foreground text-xs font-medium">
             <DollarSign className="h-3.5 w-3.5" /> Dollar ($)
           </div>
-          <p className="font-bold text-2xl text-foreground">$0.00</p>
+          <p className="font-bold text-2xl text-foreground">${dollarBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
         </motion.div>
         <motion.div
           initial={{ opacity: 0, y: 16 }}
@@ -125,7 +145,7 @@ const WalletScreen = () => {
           <div className="flex items-center gap-1.5 text-muted-foreground text-xs font-medium">
             <Star className="h-3.5 w-3.5" /> Stars
           </div>
-          <p className="font-bold text-2xl text-foreground">0</p>
+          <p className="font-bold text-2xl text-foreground">{starBalance.toLocaleString()}</p>
         </motion.div>
       </div>
 
@@ -187,6 +207,15 @@ const WalletScreen = () => {
           ))}
         </div>
       </div>
+
+      {/* Amount Input Dialog */}
+      <AmountInputDialog
+        open={amountDialog.open}
+        onClose={() => setAmountDialog((prev) => ({ ...prev, open: false }))}
+        onConfirm={handleAmountConfirm}
+        currency={amountDialog.currency}
+        action={amountDialog.action}
+      />
     </div>
   );
 };

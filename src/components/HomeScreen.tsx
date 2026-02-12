@@ -2,6 +2,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronRight, Diamond, Plus, ShoppingCart, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useBalanceContext } from "@/contexts/BalanceContext";
 import BottomNav from "./BottomNav";
 import EarnScreen from "./EarnScreen";
 import FriendsScreen from "./FriendsScreen";
@@ -49,6 +50,7 @@ const GameTile = ({ image, name, description, badge, badgeColor = "bg-green-500"
 const HomeScreen = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(0);
+  const { dollarBalance, starBalance } = useBalanceContext();
   const goToGreedyKing = () => navigate("/greedy-king");
 
   const renderTabContent = () => {
@@ -67,11 +69,11 @@ const HomeScreen = () => {
         <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide">
           <div className="flex items-center gap-1 bg-card rounded-full px-2 py-1 shrink-0">
             <span className="text-[10px]">💲</span>
-            <span className="font-bold text-[10px] text-foreground">$0.00</span>
+            <span className="font-bold text-[10px] text-foreground">${dollarBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
           </div>
           <div className="flex items-center gap-1 bg-card rounded-full px-2 py-1 shrink-0">
             <span className="text-[10px]">⭐</span>
-            <span className="font-bold text-[10px] text-foreground">Star 0</span>
+            <span className="font-bold text-[10px] text-foreground">Star {starBalance.toLocaleString()}</span>
           </div>
         </div>
         <div className="flex items-center gap-3">
