@@ -265,6 +265,54 @@ app.post("/api/admin/stats", async (req, res) => {
 });
 
 // ============================================
+// POST /api/convert-stars - Convert Stars to Dollars
+// Rate: 100 Stars = $1
+// ============================================
+const STAR_TO_DOLLAR_RATE = 100;
+
+app.post("/api/convert-stars", async (req, res) => {
+  try {
+    const { userId, starAmount } = req.body;
+
+    if (!userId || !starAmount || starAmount < STAR_TO_DOLLAR_RATE) {
+      return res.status(400).json({ error: `Minimum ${STAR_TO_DOLLAR_RATE} Stars required` });
+    }
+
+    const user = await getOrCreateUser(userId);
+
+    if (user.starBalance < starAmount) {
+      return res.status(400).json({ error: "Insufficient Star balance" });
+    }
+
+    const dollarAmount = starAmount / STAR_TO_DOLLAR_RATE;
+
+    user.starBalance -= starAmount;
+    user.dollarBalance += dollarAmount;
+    await user.save();
+
+    // Log conversion transactions
+    await Transaction.create({
+      telegramId: userId,
+      type: "convert",
+      currency: "star",
+      amount: -starAmount,
+      status: "completed",
+      description: `Converted ${starAmount} ⭐ → $${dollarAmount.toFixed(2)}`,
+    });
+
+    return res.json({
+      success: true,
+      starBalance: user.starBalance,
+      dollarBalance: user.dollarBalance,
+      converted: { stars: starAmount, dollars: dollarAmount },
+    });
+  } catch (error) {
+    console.error("Convert error:", error);
+    return res.status(500).json({ error: "Conversion failed" });
+  }
+});
+
+// ============================================
 // POST /api/game/result - Report game result
 // ============================================
 app.post("/api/game/result", async (req, res) => {

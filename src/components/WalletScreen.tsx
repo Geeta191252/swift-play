@@ -1,12 +1,15 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowDownLeft, ArrowUpRight, DollarSign, Star } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, DollarSign, Star, ArrowRightLeft } from "lucide-react";
 import { Button } from "./ui/button";
+import { Input } from "./ui/input";
 import { toast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
-import { isTelegramMiniApp, initiatePayment, fetchTransactions, type CurrencyType, type ActionType } from "@/lib/telegram";
+import { isTelegramMiniApp, initiatePayment, fetchTransactions, getTelegram, type CurrencyType, type ActionType } from "@/lib/telegram";
 import { useBalanceContext } from "@/contexts/BalanceContext";
 import AmountInputDialog from "./AmountInputDialog";
+
+const STAR_TO_DOLLAR_RATE = 100; // 100 ⭐ = $1
 
 const fallbackTransactions = [
   { type: "win", game: "Greedy King", amount: "+250", currency: "💲", time: "2 min ago" },
@@ -67,6 +70,10 @@ const WalletScreen = () => {
     currency: CurrencyType;
   }>({ open: false, action: "deposit", currency: "dollar" });
 
+  // Converter state
+  const [convertStars, setConvertStars] = useState("");
+  const [converting, setConverting] = useState(false);
+
   const { dollarBalance, starBalance, refreshBalance } = useBalanceContext();
 
   const { data: transactions = fallbackTransactions } = useQuery({
@@ -111,6 +118,45 @@ const WalletScreen = () => {
 
   const handleDeposit = (currency: CurrencyOption) => handleCurrencySelect("deposit", currency as CurrencyType);
   const handleWithdraw = (currency: CurrencyOption) => handleCurrencySelect("withdraw", currency as CurrencyType);
+
+  const starInputNum = Number(convertStars) || 0;
+  const dollarOutput = (starInputNum / STAR_TO_DOLLAR_RATE).toFixed(2);
+
+  const handleConvert = async () => {
+    if (starInputNum < STAR_TO_DOLLAR_RATE) {
+      toast({ title: "Minimum required", description: `Minimum ${STAR_TO_DOLLAR_RATE} ⭐ needed to convert.`, variant: "destructive" });
+      return;
+    }
+    if (starInputNum > starBalance) {
+      toast({ title: "Insufficient Stars", description: "You don't have enough Stars.", variant: "destructive" });
+      return;
+    }
+
+    setConverting(true);
+    try {
+      const tg = getTelegram();
+      const userId = tg?.initDataUnsafe?.user?.id || "demo";
+      const apiBase = import.meta.env.VITE_API_BASE_URL || "https://broken-bria-chetan1-ea890b93.koyeb.app/api";
+      const res = await fetch(`${apiBase}/convert-stars`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, starAmount: starInputNum }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Conversion failed");
+
+      toast({
+        title: "Converted! ✅",
+        description: `${starInputNum} ⭐ → $${dollarOutput} added to your Dollar wallet.`,
+      });
+      setConvertStars("");
+      refreshBalance();
+    } catch (err: any) {
+      toast({ title: "Error", description: err?.message || "Conversion failed.", variant: "destructive" });
+    } finally {
+      setConverting(false);
+    }
+  };
 
   return (
     <div className="px-4 pt-4 space-y-5">
@@ -164,6 +210,44 @@ const WalletScreen = () => {
           <CurrencyMenu show={withdrawMenu} onSelect={handleWithdraw} onClose={() => setWithdrawMenu(false)} />
         </div>
       </div>
+
+      {/* Star to Dollar Converter */}
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="bg-card border border-border rounded-2xl p-4 space-y-3"
+      >
+        <div className="flex items-center gap-2">
+          <ArrowRightLeft className="h-4 w-4 text-primary" />
+          <h3 className="font-semibold text-sm text-foreground">Star → Dollar Converter</h3>
+        </div>
+        <p className="text-xs text-muted-foreground">Rate: {STAR_TO_DOLLAR_RATE} ⭐ = $1.00</p>
+        <div className="flex items-center gap-2">
+          <div className="flex-1 relative">
+            <Input
+              type="number"
+              placeholder={`Min ${STAR_TO_DOLLAR_RATE}`}
+              value={convertStars}
+              onChange={(e) => setConvertStars(e.target.value)}
+              className="pr-8 rounded-xl bg-background"
+              min={STAR_TO_DOLLAR_RATE}
+            />
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">⭐</span>
+          </div>
+          <ArrowRightLeft className="h-4 w-4 text-muted-foreground shrink-0" />
+          <div className="bg-muted/50 border border-border rounded-xl px-3 py-2 min-w-[80px] text-center">
+            <span className="font-bold text-sm text-foreground">${dollarOutput}</span>
+          </div>
+        </div>
+        <Button
+          className="w-full rounded-xl h-10"
+          disabled={converting || starInputNum < STAR_TO_DOLLAR_RATE}
+          onClick={handleConvert}
+        >
+          {converting ? "Converting..." : `Convert ${starInputNum > 0 ? starInputNum + " ⭐" : ""}`}
+        </Button>
+      </motion.div>
 
       {/* Transactions */}
       <div>
