@@ -52,7 +52,7 @@ const FriendsScreen = () => {
       <div className="space-y-3">
         {inviteTasks.map((task, i) => (
           <motion.div
-            key={task.title}
+            key={task.progress}
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: i * 0.08 }}
