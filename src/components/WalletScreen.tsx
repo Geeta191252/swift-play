@@ -187,7 +187,34 @@ const WalletScreen = () => {
         </motion.div>
       </div>
 
-      {/* Actions */}
+      {/* Winning Actions */}
+      <div className="grid grid-cols-2 gap-3">
+        <Button
+          variant="outline"
+          className="rounded-xl h-12 w-full border-green-500/30 text-green-500 hover:bg-green-500/10"
+          onClick={() => {
+            if (dollarBalance < 10) {
+              toast({ title: "Minimum $10", description: "You need at least $10 in winnings to withdraw.", variant: "destructive" });
+              return;
+            }
+            handleCurrencySelect("withdraw", "dollar");
+          }}
+        >
+          <DollarSign className="h-4 w-4 mr-1" /> Winning Withdraw
+        </Button>
+        <Button
+          variant="outline"
+          className="rounded-xl h-12 w-full border-yellow-500/30 text-yellow-500 hover:bg-yellow-500/10"
+          onClick={() => {
+            const el = document.getElementById("star-converter");
+            el?.scrollIntoView({ behavior: "smooth" });
+          }}
+        >
+          <Star className="h-4 w-4 mr-1" /> Star Convert
+        </Button>
+      </div>
+
+      {/* Deposit & Withdraw */}
       <div className="grid grid-cols-2 gap-3">
         <div className="relative">
           <Button
@@ -215,6 +242,7 @@ const WalletScreen = () => {
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
+        id="star-converter"
         className="bg-card border border-border rounded-2xl p-4 space-y-3"
       >
         <div className="flex items-center gap-2">
