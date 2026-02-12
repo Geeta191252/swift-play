@@ -70,9 +70,10 @@ const FriendsScreen = () => {
         ))}
       </div>
 
-      <p className="text-xs text-muted-foreground text-center px-2">
-        📌 Note: After the 3rd referral, you will earn 3 ⭐ for every referral!
-      </p>
+      <div className="text-xs text-muted-foreground text-center px-2 space-y-1">
+        <p>📌 Note: 3rd refer ke baad, har refer par aapko 3 ⭐ milenge!</p>
+        <p>📌 Note: After the 3rd referral, you will earn 3 ⭐ for every referral!</p>
+      </div>
     </div>
   );
 };
