@@ -121,3 +121,74 @@ export const initiatePayment = async (
     throw error;
   }
 };
+
+/**
+ * Fetch user balance from backend
+ */
+export const fetchBalance = async (): Promise<{ dollarBalance: number; starBalance: number }> => {
+  const tg = getTelegram();
+  const userId = tg?.initDataUnsafe?.user?.id;
+
+  const res = await fetch(`${API_BASE_URL}/balance?userId=${userId || "demo"}`, {
+    headers: { "Content-Type": "application/json" },
+  });
+
+  if (!res.ok) {
+    throw new Error("Failed to fetch balance");
+  }
+
+  return res.json();
+};
+
+/**
+ * Fetch transaction history from backend
+ */
+export const fetchTransactions = async (): Promise<Array<{
+  type: string;
+  game: string;
+  amount: string;
+  currency: string;
+  time: string;
+}>> => {
+  const tg = getTelegram();
+  const userId = tg?.initDataUnsafe?.user?.id;
+
+  const res = await fetch(`${API_BASE_URL}/transactions?userId=${userId || "demo"}`, {
+    headers: { "Content-Type": "application/json" },
+  });
+
+  if (!res.ok) {
+    throw new Error("Failed to fetch transactions");
+  }
+
+  return res.json();
+};
+
+/**
+ * Report game result to backend
+ */
+export const reportGameResult = async (data: {
+  betAmount: number;
+  winAmount: number;
+  currency: CurrencyType;
+  game: string;
+}): Promise<{ dollarBalance: number; starBalance: number }> => {
+  const tg = getTelegram();
+  const userId = tg?.initDataUnsafe?.user?.id;
+
+  const res = await fetch(`${API_BASE_URL}/game/result`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      userId,
+      ...data,
+      initData: tg?.initData,
+    }),
+  });
+
+  if (!res.ok) {
+    throw new Error("Failed to report game result");
+  }
+
+  return res.json();
+};

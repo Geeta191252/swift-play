@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { BarChart3, CircleHelp, Diamond, ChevronRight, History, Home, Trophy, Volume2, VolumeX, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { playBetSound, playSpinSound, playWinSound, playLoseSound, playCountdownBeep, playResultReveal, startBgMusic, stopBgMusic } from "@/hooks/useGameSounds";
+import { useBalanceContext } from "@/contexts/BalanceContext";
+import { reportGameResult, type CurrencyType } from "@/lib/telegram";
 
 const FOOD_ITEMS = [
   { emoji: "🌭", name: "Hot Dog", multiplier: 10 },
@@ -53,8 +55,11 @@ const GreedyKingGame = () => {
   const [soundOn, setSoundOn] = useState(true);
   const soundRef = useRef(true);
   useEffect(() => { soundRef.current = soundOn; }, [soundOn]);
-  const [dollarBalance, setDollarBalance] = useState(7575);
-  const [starBalance, setStarBalance] = useState(3200);
+  const { dollarBalance, starBalance, refreshBalance } = useBalanceContext();
+  const [localDollarAdj, setLocalDollarAdj] = useState(0);
+  const [localStarAdj, setLocalStarAdj] = useState(0);
+  const gameDollarBalance = dollarBalance + localDollarAdj;
+  const gameStarBalance = starBalance + localStarAdj;
   const [todayProfits, setTodayProfits] = useState(0);
   const [activeWallet, setActiveWallet] = useState<"dollar" | "star">("dollar");
   const [showLeaderboard, setShowLeaderboard] = useState(false);
@@ -173,9 +178,9 @@ const GreedyKingGame = () => {
           setWinAmount(amount);
           setTotalLost(lostOnOthers);
           if (activeWallet === "dollar") {
-            setDollarBalance(g => g + amount);
+            setLocalDollarAdj(g => g + amount);
           } else {
-            setStarBalance(g => g + amount);
+            setLocalStarAdj(g => g + amount);
           }
           setTodayProfits(p => p + netProfit);
           if (soundRef.current) playWinSound();
@@ -212,12 +217,12 @@ const GreedyKingGame = () => {
 
   const betOnFruitClick = (fruitIndex: number) => {
     if (phase !== "betting") return;
-    const currentBalance = activeWallet === "dollar" ? dollarBalance : starBalance;
+    const currentBalance = activeWallet === "dollar" ? gameDollarBalance : gameStarBalance;
     if (currentBalance < selectedBet) return;
     if (activeWallet === "dollar") {
-      setDollarBalance(prev => prev - selectedBet);
+      setLocalDollarAdj(prev => prev - selectedBet);
     } else {
-      setStarBalance(prev => prev - selectedBet);
+      setLocalStarAdj(prev => prev - selectedBet);
     }
     setUserBets(prev => {
       const copy = [...prev];
@@ -278,7 +283,7 @@ const GreedyKingGame = () => {
               const y = 150 + r * Math.sin(angle);
               const myBet = userBets[i];
               const hasBetOnThis = myBet > 0;
-              const currentBal = activeWallet === "dollar" ? dollarBalance : starBalance;
+              const currentBal = activeWallet === "dollar" ? gameDollarBalance : gameStarBalance;
               const canBet = phase === "betting" && currentBal >= selectedBet;
 
               return (
@@ -434,13 +439,13 @@ const GreedyKingGame = () => {
               <>
                 <span className="text-[10px] font-semibold" style={{ color: "hsl(0, 0%, 45%)" }}>Stars</span>
                 <span className="text-base">⭐</span>
-                <span className="font-bold text-sm" style={{ color: "hsl(45, 90%, 45%)" }}>{starBalance.toLocaleString()}</span>
+                <span className="font-bold text-sm" style={{ color: "hsl(45, 90%, 45%)" }}>{gameStarBalance.toLocaleString()}</span>
               </>
             ) : (
               <>
                 <span className="text-[10px] font-semibold" style={{ color: "hsl(0, 0%, 45%)" }}>Balance</span>
                 <span className="text-base">💲</span>
-                <span className="font-bold text-sm" style={{ color: "hsl(0, 0%, 15%)" }}>{dollarBalance.toLocaleString()}</span>
+                <span className="font-bold text-sm" style={{ color: "hsl(0, 0%, 15%)" }}>{gameDollarBalance.toLocaleString()}</span>
               </>
             )}
           </div>
