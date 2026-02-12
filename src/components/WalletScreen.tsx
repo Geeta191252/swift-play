@@ -1,12 +1,12 @@
 import { motion } from "framer-motion";
-import { ArrowDownLeft, ArrowUpRight, Diamond, Star } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, DollarSign, Star } from "lucide-react";
 import { Button } from "./ui/button";
 
 const transactions = [
-  { type: "win", game: "Greedy King", amount: "+250", currency: "💎", time: "2 min ago" },
-  { type: "bet", game: "Greedy King", amount: "-100", currency: "💎", time: "5 min ago" },
+  { type: "win", game: "Greedy King", amount: "+250", currency: "💲", time: "2 min ago" },
+  { type: "bet", game: "Greedy King", amount: "-100", currency: "💲", time: "5 min ago" },
   { type: "win", game: "Lucky Slots", amount: "+80", currency: "⭐", time: "1 hr ago" },
-  { type: "bonus", game: "Daily Login", amount: "+50", currency: "💎", time: "3 hr ago" },
+  { type: "bonus", game: "Daily Login", amount: "+50", currency: "💲", time: "3 hr ago" },
   { type: "bet", game: "Dice Master", amount: "-200", currency: "⭐", time: "5 hr ago" },
 ];
 
@@ -23,9 +23,9 @@ const WalletScreen = () => {
           className="bg-card border border-border rounded-2xl p-4 space-y-1"
         >
           <div className="flex items-center gap-1.5 text-muted-foreground text-xs font-medium">
-            <Diamond className="h-3.5 w-3.5" /> Diamonds
+            <DollarSign className="h-3.5 w-3.5" /> Dollar ($)
           </div>
-          <p className="font-bold text-2xl text-foreground">7,570</p>
+          <p className="font-bold text-2xl text-foreground">$0.00</p>
         </motion.div>
         <motion.div
           initial={{ opacity: 0, y: 16 }}
@@ -36,7 +36,7 @@ const WalletScreen = () => {
           <div className="flex items-center gap-1.5 text-muted-foreground text-xs font-medium">
             <Star className="h-3.5 w-3.5" /> Stars
           </div>
-          <p className="font-bold text-2xl text-foreground">1,200</p>
+          <p className="font-bold text-2xl text-foreground">0</p>
         </motion.div>
       </div>
 
