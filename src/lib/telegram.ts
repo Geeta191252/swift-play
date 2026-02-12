@@ -66,7 +66,7 @@ export const requestInvoice = async (
   amount: number
 ): Promise<string> => {
   const tg = getTelegram();
-  const userId = tg?.initDataUnsafe?.user?.id;
+  const userId = tg?.initDataUnsafe?.user?.id || "demo";
 
   const res = await fetch(`${API_BASE_URL}/${action}`, {
     method: "POST",
