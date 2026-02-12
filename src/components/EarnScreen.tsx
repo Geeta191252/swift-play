@@ -1,20 +1,33 @@
 import { motion } from "framer-motion";
-import { Gift, Star, CheckCircle, Clock } from "lucide-react";
+import clapperboardIcon from "@/assets/icon-clapperboard.png";
 
 const tasks = [
-  { icon: Gift, title: "Daily Login Bonus", reward: "⭐ 5", done: true },
-  { icon: Star, title: "Play 3 Games", reward: "⭐ 10", done: false, progress: "1/3", percent: 33 },
-  { icon: CheckCircle, title: "Get 5 Friends", reward: "⭐ 15", done: false, progress: "3/5", percent: 60 },
-  { icon: Clock, title: "Watch an ad today 1/3 📺", reward: "⭐ 5", done: false, progress: "0/3", percent: 0 },
-  { icon: Clock, title: "Watch an ad today 2/3 📺", reward: "⭐ 10", done: false, progress: "1/3", percent: 33 },
-  { icon: Clock, title: "Watch an ad today 3/3 📺", reward: "⭐ 15", done: false, progress: "2/3", percent: 66 },
+  {
+    title: "Watch an ad today 3/3 📺...",
+    subtitle: "Watch an ad and earn. It's that ...",
+    reward: 300,
+    progress: "3/3",
+  },
+  {
+    title: "Watch an ad today 2/3 📺...",
+    subtitle: "Watch an ad and earn. It's that ...",
+    reward: 200,
+    progress: "2/3",
+  },
+  {
+    title: "Watch an ad today 1/2 📺",
+    subtitle: "Watch an ad and earn reward. I...",
+    reward: 300,
+    progress: "1/2",
+  },
 ];
 
 const EarnScreen = () => {
   return (
     <div className="px-4 pt-4 space-y-4">
-      <h2 className="font-bold text-xl text-foreground">Earn Rewards</h2>
-      <p className="text-sm text-muted-foreground">Complete tasks to earn diamonds!</p>
+      <h2 className="font-bold text-xl text-foreground flex items-center gap-2">
+        🕹️ Daily tasks
+      </h2>
 
       <div className="space-y-3">
         {tasks.map((task, i) => (
@@ -23,31 +36,23 @@ const EarnScreen = () => {
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: i * 0.08 }}
-            className={`flex items-center gap-3 p-4 rounded-2xl border ${
-              task.done ? "bg-primary/10 border-primary/30" : "bg-card border-border"
-            }`}
+            className="flex items-center gap-3 p-3 rounded-2xl bg-card/60 border border-border/50"
           >
-            <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${
-              task.done ? "bg-primary/20" : "bg-muted"
-            }`}>
-              <task.icon className={`h-5 w-5 ${task.done ? "text-primary" : "text-muted-foreground"}`} />
+            <div className="h-14 w-14 rounded-xl bg-muted/50 flex items-center justify-center shrink-0 p-1.5">
+              <img src={clapperboardIcon} alt="Ad" className="h-full w-full object-contain" />
             </div>
-            <div className="flex-1">
-              <h4 className={`font-semibold text-sm ${task.done ? "text-primary line-through" : "text-foreground"}`}>
+            <div className="flex-1 min-w-0">
+              <h4 className="font-bold text-sm text-foreground truncate">
                 {task.title}
               </h4>
-              {task.progress && !task.done && (
-                <div className="flex items-center gap-2 mt-1">
-                  <span className="text-xs text-primary font-semibold">{task.percent}%</span>
-                  <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-                    <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${task.percent}%` }} />
-                  </div>
-                </div>
-              )}
+              <p className="text-xs text-muted-foreground truncate">
+                {task.subtitle}
+              </p>
             </div>
-            <span className={`text-sm font-bold ${task.done ? "text-primary/50" : "text-primary"}`}>
+            <span className="text-xl font-bold text-foreground shrink-0">
               {task.reward}
             </span>
+            <span className="text-lg shrink-0">⭐</span>
           </motion.div>
         ))}
       </div>
