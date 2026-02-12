@@ -86,15 +86,6 @@ const WalletScreen = () => {
     const { action, currency } = amountDialog;
     setAmountDialog((prev) => ({ ...prev, open: false }));
 
-    if (!isTelegramMiniApp()) {
-      toast({
-        title: "Telegram Required",
-        description: "Please open this app inside Telegram to use wallet features.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setLoading(true);
     try {
       await initiatePayment(action, currency, amount, (status) => {
