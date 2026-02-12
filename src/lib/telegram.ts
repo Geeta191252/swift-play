@@ -38,7 +38,8 @@ export const getTelegram = (): TelegramWebApp | null => {
 };
 
 export const isTelegramMiniApp = (): boolean => {
-  return !!window.Telegram?.WebApp?.initData;
+  // Check if Telegram WebApp object exists (initData can be empty in some cases)
+  return !!window.Telegram?.WebApp;
 };
 
 export const getTelegramUser = () => {
