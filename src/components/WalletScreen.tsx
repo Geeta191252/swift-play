@@ -552,14 +552,19 @@ const WalletScreen = () => {
       <div>
         <h3 className="font-semibold text-foreground text-sm mb-3">Recent Transactions</h3>
         <div className="space-y-2">
-          {transactions.map((tx: any, i: number) => {
-            const isPositive = tx.type === "win" || tx.type === "bonus" || tx.type === "deposit";
+        {transactions.map((tx: any, i: number) => {
+            const isCancelled = tx.status === "failed" || tx.status === "refunded";
+            const isPositive = !isCancelled && (tx.type === "win" || tx.type === "bonus" || tx.type === "deposit" || tx.type === "ton_deposit");
+            const currencySymbol = tx.currency === "dollar" || tx.currency === "💲" || tx.type === "ton_deposit" ? "$" : "⭐";
             const amountStr = String(tx.amount);
-            const displayAmount = amountStr.startsWith("+") || amountStr.startsWith("-")
-              ? amountStr
-              : (isPositive ? "+" : "-") + amountStr;
-            const currencySymbol = tx.currency === "dollar" || tx.currency === "💲" ? "💲" : "⭐";
+            const rawAmount = amountStr.replace(/^[+-]/, "");
+            const displayAmount = isCancelled
+              ? rawAmount
+              : (isPositive ? "+" : "-") + rawAmount;
             const timeDisplay = tx.time || (tx.createdAt ? new Date(tx.createdAt).toLocaleString() : "");
+
+            const iconColor = isCancelled ? "bg-yellow-500/20" : isPositive ? "bg-green-500/20" : "bg-red-500/20";
+            const textColor = isCancelled ? "text-yellow-500" : isPositive ? "text-green-500" : "text-red-500";
 
             return (
               <motion.div
@@ -569,21 +574,23 @@ const WalletScreen = () => {
                 transition={{ delay: i * 0.06 }}
                 className="flex items-center gap-3 bg-card border border-border rounded-2xl p-3"
               >
-                <div className={`h-9 w-9 rounded-xl flex items-center justify-center ${
-                  isPositive ? "bg-green-500/20" : "bg-red-500/20"
-                }`}>
-                  {isPositive ? (
+                <div className={`h-9 w-9 rounded-xl flex items-center justify-center ${iconColor}`}>
+                  {isCancelled ? (
+                    <span className="text-yellow-500 text-xs font-bold">✕</span>
+                  ) : isPositive ? (
                     <ArrowDownLeft className="h-4 w-4 text-green-500" />
                   ) : (
                     <ArrowUpRight className="h-4 w-4 text-red-500" />
                   )}
                 </div>
                 <div className="flex-1">
-                  <h4 className="font-semibold text-sm text-foreground">{tx.game || tx.description || tx.type}</h4>
+                  <h4 className="font-semibold text-sm text-foreground">
+                    {isCancelled ? `Cancelled: ${tx.description || tx.type}` : (tx.game || tx.description || tx.type)}
+                  </h4>
                   <p className="text-xs text-muted-foreground">{timeDisplay}</p>
                 </div>
-                <span className={`text-sm font-bold ${isPositive ? "text-green-500" : "text-red-500"}`}>
-                  {currencySymbol} {displayAmount}
+                <span className={`text-sm font-bold ${textColor}`}>
+                  {currencySymbol} {isCancelled ? "Cancel" : displayAmount}
                 </span>
               </motion.div>
             );
