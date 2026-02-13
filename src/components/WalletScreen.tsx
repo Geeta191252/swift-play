@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowDownLeft, ArrowUpRight, DollarSign, Star, ArrowRightLeft } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, DollarSign, Star, ArrowRightLeft, Wallet, Unplug } from "lucide-react";
+import { useTonConnectUI, useTonWallet, useTonAddress } from "@tonconnect/ui-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { toast } from "@/hooks/use-toast";
@@ -73,6 +74,11 @@ const WalletScreen = () => {
   // Converter state
   const [convertStars, setConvertStars] = useState("");
   const [converting, setConverting] = useState(false);
+
+  // TON Connect
+  const [tonConnectUI] = useTonConnectUI();
+  const wallet = useTonWallet();
+  const tonAddress = useTonAddress(false);
 
   const { dollarBalance, starBalance, refreshBalance } = useBalanceContext();
 
@@ -186,6 +192,73 @@ const WalletScreen = () => {
           <p className="font-bold text-2xl text-foreground">{starBalance.toLocaleString()}</p>
         </motion.div>
       </div>
+
+      {/* TON Wallet */}
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.08 }}
+        className="bg-card border border-border rounded-2xl p-4 space-y-3"
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Wallet className="h-4 w-4 text-primary" />
+            <h3 className="font-semibold text-sm text-foreground">TON Wallet</h3>
+          </div>
+          {wallet ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-xs text-destructive hover:text-destructive"
+              onClick={() => tonConnectUI.disconnect()}
+            >
+              <Unplug className="h-3 w-3 mr-1" /> Disconnect
+            </Button>
+          ) : null}
+        </div>
+
+        {wallet ? (
+          <div className="space-y-2">
+            <div className="bg-muted/50 border border-border rounded-xl px-3 py-2">
+              <p className="text-xs text-muted-foreground">Connected Address</p>
+              <p className="text-xs font-mono text-foreground truncate">
+                {tonAddress ? `${tonAddress.slice(0, 6)}...${tonAddress.slice(-6)}` : "Loading..."}
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                variant="outline"
+                className="rounded-xl h-10 text-xs"
+                onClick={() => {
+                  toast({ title: "TON Deposit", description: "TON deposit feature coming soon! Backend integration required." });
+                }}
+              >
+                <ArrowDownLeft className="h-3.5 w-3.5 mr-1" /> TON Deposit
+              </Button>
+              <Button
+                variant="outline"
+                className="rounded-xl h-10 text-xs"
+                onClick={() => {
+                  if (dollarBalance < 10) {
+                    toast({ title: "Minimum $10", description: "You need at least $10 to withdraw via TON.", variant: "destructive" });
+                    return;
+                  }
+                  toast({ title: "TON Withdraw", description: "TON withdrawal feature coming soon! Backend integration required." });
+                }}
+              >
+                <ArrowUpRight className="h-3.5 w-3.5 mr-1" /> TON Withdraw
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <Button
+            className="w-full rounded-xl h-11"
+            onClick={() => tonConnectUI.openModal()}
+          >
+            <Wallet className="h-4 w-4 mr-2" /> Connect TON Wallet
+          </Button>
+        )}
+      </motion.div>
 
       {/* Winning Actions */}
       <div className="grid grid-cols-2 gap-3">
