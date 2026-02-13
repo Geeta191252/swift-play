@@ -183,7 +183,7 @@ app.post("/api/transactions", async (req, res) => {
       return res.json({ transactions: [] });
     }
 
-    const transactions = await Transaction.find({ telegramId: numericId })
+    const transactions = await Transaction.find({ telegramId: numericId, status: "completed" })
       .sort({ createdAt: -1 })
       .limit(20);
 
