@@ -2,6 +2,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowDownLeft, ArrowUpRight, DollarSign, Star, ArrowRightLeft, Wallet, Unplug } from "lucide-react";
 import { useTonConnectUI, useTonWallet, useTonAddress } from "@tonconnect/ui-react";
+import { beginCell } from "@ton/core";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { toast } from "@/hooks/use-toast";
@@ -138,38 +139,12 @@ const WalletScreen = () => {
       // Step 2: Send TON via TonConnect
       const nanoTon = BigInt(Math.floor(tonAmt * 1e9)).toString();
 
-      // Encode comment as BOC (Bag of Cells) payload for TON Connect
-      // TON Connect requires payloads in BOC base64 format
-      const commentText = initData.depositComment;
-      const commentBytes = new TextEncoder().encode(commentText);
-      
-      // Build a simple Cell with comment: 32-bit opcode 0x00000000 + text bytes
-      // Cell serialization: refs_descriptor(1) + bits_descriptor(1) + data + cell_hash...
-      const dataBytes = new Uint8Array(4 + commentBytes.length);
-      dataBytes[0] = 0; dataBytes[1] = 0; dataBytes[2] = 0; dataBytes[3] = 0; // comment opcode
-      dataBytes.set(commentBytes, 4);
-      
-      const dataBits = dataBytes.length * 8;
-      const refsDescriptor = 0; // no refs
-      const bitsDescriptor = Math.ceil(dataBits / 8) * 2; // bits descriptor byte
-      // Minimal BOC serialization
-      const bocHeader = new Uint8Array([
-        0xb5, 0xee, 0x9c, 0x72, // BOC magic
-        0x01, // flags + has_idx(0) + has_crc32(0) + has_cache_bits(0) + size:(1 byte for ref size)
-        0x01, // offset_size = 1
-        0x01, // cells count = 1
-        0x01, // roots count = 1
-        0x00, // absent count = 0
-        dataBytes.length + 2, // total cells size (refs_desc + bits_desc + data)
-        0x00, // root index = 0
-      ]);
-      const cellData = new Uint8Array([refsDescriptor, bitsDescriptor, ...dataBytes]);
-      
-      const boc = new Uint8Array(bocHeader.length + cellData.length);
-      boc.set(bocHeader, 0);
-      boc.set(cellData, bocHeader.length);
-      
-      const payloadBase64 = btoa(String.fromCharCode(...boc));
+      // Encode comment as BOC using @ton/core for proper TON Connect payload
+      const body = beginCell()
+        .storeUint(0, 32) // comment opcode
+        .storeStringTail(initData.depositComment)
+        .endCell();
+      const payloadBase64 = body.toBoc().toString("base64");
 
       const txResult = await tonConnectUI.sendTransaction({
         validUntil: Math.floor(Date.now() / 1000) + 600,
