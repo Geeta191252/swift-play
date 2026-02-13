@@ -589,6 +589,40 @@ app.get("/api/ton/price", async (req, res) => {
   }
 });
 
+// ============================================
+// POST /api/winnings - Get user winnings (only from game wins)
+// ============================================
+app.post("/api/winnings", async (req, res) => {
+  try {
+    const { userId } = req.body;
+    if (!userId) return res.status(400).json({ error: "Missing userId" });
+
+    const numericId = Number(userId);
+    if (!numericId || isNaN(numericId)) {
+      return res.json({ dollarWinnings: 0, starWinnings: 0 });
+    }
+
+    // Sum only "win" type transactions per currency
+    const dollarWins = await Transaction.aggregate([
+      { $match: { telegramId: numericId, type: "win", currency: "dollar", status: "completed" } },
+      { $group: { _id: null, total: { $sum: "$amount" } } }
+    ]);
+
+    const starWins = await Transaction.aggregate([
+      { $match: { telegramId: numericId, type: "win", currency: "star", status: "completed" } },
+      { $group: { _id: null, total: { $sum: "$amount" } } }
+    ]);
+
+    return res.json({
+      dollarWinnings: Math.max(0, dollarWins[0]?.total || 0),
+      starWinnings: Math.max(0, starWins[0]?.total || 0),
+    });
+  } catch (error) {
+    console.error("Winnings error:", error);
+    return res.status(500).json({ error: "Failed to fetch winnings" });
+  }
+});
+
 // SPA fallback - serve index.html for all non-API routes
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "../public/index.html"));
