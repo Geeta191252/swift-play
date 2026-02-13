@@ -418,6 +418,177 @@ app.post("/api/telegram-webhook", async (req, res) => {
   }
 });
 
+// ============================================
+// TON Wallet Integration
+// ============================================
+const OWNER_TON_WALLET = process.env.OWNER_TON_WALLET || "";
+
+// Helper: Fetch TON/USD price from CoinGecko
+async function getTonUsdPrice() {
+  try {
+    const res = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=the-open-network&vs_currencies=usd");
+    const data = await res.json();
+    return data["the-open-network"]?.usd || 2.5; // fallback price
+  } catch {
+    return 2.5; // fallback
+  }
+}
+
+// POST /api/ton/init-deposit - Get owner wallet + create pending deposit
+app.post("/api/ton/init-deposit", async (req, res) => {
+  try {
+    const { userId, tonAmount } = req.body;
+    if (!userId || !tonAmount || tonAmount <= 0) {
+      return res.status(400).json({ error: "Missing userId or tonAmount" });
+    }
+    if (!OWNER_TON_WALLET) {
+      return res.status(500).json({ error: "Owner TON wallet not configured" });
+    }
+
+    const tonPrice = await getTonUsdPrice();
+    const usdEquivalent = tonAmount * tonPrice;
+
+    // Create unique deposit comment
+    const depositComment = `deposit_${userId}_${Date.now()}`;
+
+    // Create pending transaction
+    const tx = await Transaction.create({
+      telegramId: Number(userId),
+      type: "ton_deposit",
+      currency: "ton",
+      amount: tonAmount,
+      status: "pending",
+      tonAmount: tonAmount,
+      tonReceiverAddress: OWNER_TON_WALLET,
+      depositComment,
+      usdEquivalent,
+      description: `TON Deposit: ${tonAmount} TON ≈ $${usdEquivalent.toFixed(2)}`,
+    });
+
+    return res.json({
+      ownerWallet: OWNER_TON_WALLET,
+      depositComment,
+      tonAmount,
+      usdEquivalent,
+      tonPrice,
+      transactionId: tx._id,
+    });
+  } catch (error) {
+    console.error("TON init-deposit error:", error);
+    return res.status(500).json({ error: "Failed to init TON deposit" });
+  }
+});
+
+// POST /api/ton/confirm-deposit - Confirm deposit after user sends TON
+app.post("/api/ton/confirm-deposit", async (req, res) => {
+  try {
+    const { userId, transactionId, bocHash } = req.body;
+    if (!userId || !transactionId) {
+      return res.status(400).json({ error: "Missing userId or transactionId" });
+    }
+
+    const tx = await Transaction.findById(transactionId);
+    if (!tx || tx.status !== "pending" || tx.type !== "ton_deposit") {
+      return res.status(400).json({ error: "Invalid or already processed transaction" });
+    }
+    if (tx.telegramId !== Number(userId)) {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
+
+    // Mark as completed and credit user balance
+    tx.status = "completed";
+    tx.tonTxHash = bocHash || "tonconnect_confirmed";
+    await tx.save();
+
+    const user = await getOrCreateUser(userId);
+    user.dollarBalance += tx.usdEquivalent;
+    await user.save();
+
+    console.log(`✅ TON Deposit: ${tx.tonAmount} TON ($${tx.usdEquivalent.toFixed(2)}) for user ${userId}`);
+
+    return res.json({
+      success: true,
+      credited: tx.usdEquivalent,
+      dollarBalance: user.dollarBalance,
+      starBalance: user.starBalance,
+    });
+  } catch (error) {
+    console.error("TON confirm-deposit error:", error);
+    return res.status(500).json({ error: "Failed to confirm TON deposit" });
+  }
+});
+
+// POST /api/ton/withdraw - Withdraw dollars via TON
+app.post("/api/ton/withdraw", async (req, res) => {
+  try {
+    const { userId, dollarAmount, tonWalletAddress } = req.body;
+    if (!userId || !dollarAmount || !tonWalletAddress) {
+      return res.status(400).json({ error: "Missing userId, dollarAmount, or tonWalletAddress" });
+    }
+    if (dollarAmount < 10) {
+      return res.status(400).json({ error: "Minimum withdrawal is $10" });
+    }
+
+    const user = await getOrCreateUser(userId);
+    if (user.dollarBalance < dollarAmount) {
+      return res.status(400).json({ error: "Insufficient dollar balance" });
+    }
+
+    const tonPrice = await getTonUsdPrice();
+    const tonAmount = dollarAmount / tonPrice;
+
+    // Deduct balance
+    user.dollarBalance -= dollarAmount;
+    await user.save();
+
+    // Create withdrawal transaction (owner will process manually)
+    await Transaction.create({
+      telegramId: Number(userId),
+      type: "ton_withdraw",
+      currency: "ton",
+      amount: -dollarAmount,
+      tonAmount,
+      tonReceiverAddress: tonWalletAddress,
+      usdEquivalent: dollarAmount,
+      status: "pending",
+      description: `TON Withdraw: $${dollarAmount} ≈ ${tonAmount.toFixed(4)} TON → ${tonWalletAddress.slice(0, 8)}...`,
+    });
+
+    // Notify owner via Telegram
+    try {
+      await bot.sendMessage(6965488457, 
+        `💰 TON Withdrawal Request!\n\nUser: ${userId}\nAmount: $${dollarAmount} ≈ ${tonAmount.toFixed(4)} TON\nSend to: \`${tonWalletAddress}\`\nTON Price: $${tonPrice.toFixed(2)}`,
+        { parse_mode: "Markdown" }
+      );
+    } catch (e) {
+      console.error("Failed to notify owner:", e.message);
+    }
+
+    return res.json({
+      success: true,
+      tonAmount,
+      tonPrice,
+      dollarAmount,
+      dollarBalance: user.dollarBalance,
+      starBalance: user.starBalance,
+      message: "Withdrawal request submitted. TON will be sent to your wallet shortly.",
+    });
+  } catch (error) {
+    console.error("TON withdraw error:", error);
+    return res.status(500).json({ error: "Withdrawal failed" });
+  }
+});
+
+// POST /api/ton/price - Get current TON price
+app.get("/api/ton/price", async (req, res) => {
+  try {
+    const price = await getTonUsdPrice();
+    return res.json({ tonUsdPrice: price });
+  } catch (error) {
+    return res.status(500).json({ error: "Failed to fetch price" });
+  }
+});
+
 // SPA fallback - serve index.html for all non-API routes
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "../public/index.html"));

@@ -80,7 +80,15 @@ const WalletScreen = () => {
   const wallet = useTonWallet();
   const tonAddress = useTonAddress(false);
 
+  // TON deposit/withdraw state
+  const [tonDepositAmount, setTonDepositAmount] = useState("");
+  const [tonWithdrawAmount, setTonWithdrawAmount] = useState("");
+  const [tonProcessing, setTonProcessing] = useState(false);
+  const [tonPrice, setTonPrice] = useState<number | null>(null);
+
   const { dollarBalance, starBalance, refreshBalance } = useBalanceContext();
+
+  const apiBase = import.meta.env.VITE_API_BASE_URL || "https://broken-bria-chetan1-ea890b93.koyeb.app/api";
 
   const { data: transactions = fallbackTransactions } = useQuery({
     queryKey: ["transactions"],
@@ -88,6 +96,138 @@ const WalletScreen = () => {
     placeholderData: fallbackTransactions,
     retry: 1,
   });
+
+  // Fetch TON price
+  useQuery({
+    queryKey: ["ton-price"],
+    queryFn: async () => {
+      const res = await fetch(`${apiBase}/ton/price`);
+      const data = await res.json();
+      setTonPrice(data.tonUsdPrice);
+      return data.tonUsdPrice;
+    },
+    refetchInterval: 60000,
+  });
+
+  // ---- TON Deposit Handler ----
+  const handleTonDeposit = async () => {
+    const tonAmt = Number(tonDepositAmount);
+    if (!tonAmt || tonAmt <= 0) {
+      toast({ title: "Invalid amount", description: "Enter a valid TON amount.", variant: "destructive" });
+      return;
+    }
+    if (!tonAddress) {
+      toast({ title: "Wallet not connected", description: "Connect your TON wallet first.", variant: "destructive" });
+      return;
+    }
+
+    setTonProcessing(true);
+    try {
+      const tg = getTelegram();
+      const userId = tg?.initDataUnsafe?.user?.id || "demo";
+
+      // Step 1: Init deposit on backend → get owner wallet & comment
+      const initRes = await fetch(`${apiBase}/ton/init-deposit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, tonAmount: tonAmt }),
+      });
+      const initData = await initRes.json();
+      if (!initRes.ok) throw new Error(initData.error || "Failed to init deposit");
+
+      // Step 2: Send TON via TonConnect
+      const nanoTon = BigInt(Math.floor(tonAmt * 1e9)).toString();
+
+      // Encode comment as payload (simple text comment)
+      const commentBytes = new TextEncoder().encode(initData.depositComment);
+      // Build comment cell: 32-bit 0x00000000 prefix + utf8 text
+      const payload = new Uint8Array(4 + commentBytes.length);
+      payload.set(new Uint8Array([0, 0, 0, 0]), 0); // comment op code
+      payload.set(commentBytes, 4);
+      const payloadBase64 = btoa(String.fromCharCode(...payload));
+
+      const txResult = await tonConnectUI.sendTransaction({
+        validUntil: Math.floor(Date.now() / 1000) + 600,
+        messages: [
+          {
+            address: initData.ownerWallet,
+            amount: nanoTon,
+            payload: payloadBase64,
+          },
+        ],
+      });
+
+      // Step 3: Confirm deposit on backend
+      const confirmRes = await fetch(`${apiBase}/ton/confirm-deposit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId,
+          transactionId: initData.transactionId,
+          bocHash: txResult.boc || "confirmed",
+        }),
+      });
+      const confirmData = await confirmRes.json();
+      if (!confirmRes.ok) throw new Error(confirmData.error || "Failed to confirm deposit");
+
+      toast({
+        title: "TON Deposit Successful! ✅",
+        description: `${tonAmt} TON ≈ $${initData.usdEquivalent.toFixed(2)} added to your wallet!`,
+      });
+      setTonDepositAmount("");
+      refreshBalance();
+    } catch (err: any) {
+      if (err?.message?.includes("Rejected")) {
+        toast({ title: "Cancelled", description: "Transaction was cancelled." });
+      } else {
+        toast({ title: "Error", description: err?.message || "TON deposit failed.", variant: "destructive" });
+      }
+    } finally {
+      setTonProcessing(false);
+    }
+  };
+
+  // ---- TON Withdraw Handler ----
+  const handleTonWithdraw = async () => {
+    const dollarAmt = Number(tonWithdrawAmount);
+    if (!dollarAmt || dollarAmt < 10) {
+      toast({ title: "Minimum $10", description: "Minimum withdrawal is $10.", variant: "destructive" });
+      return;
+    }
+    if (dollarAmt > dollarBalance) {
+      toast({ title: "Insufficient balance", description: "You don't have enough dollar balance.", variant: "destructive" });
+      return;
+    }
+    if (!tonAddress) {
+      toast({ title: "Wallet not connected", description: "Connect your TON wallet first.", variant: "destructive" });
+      return;
+    }
+
+    setTonProcessing(true);
+    try {
+      const tg = getTelegram();
+      const userId = tg?.initDataUnsafe?.user?.id || "demo";
+
+      const res = await fetch(`${apiBase}/ton/withdraw`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, dollarAmount: dollarAmt, tonWalletAddress: tonAddress }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Withdrawal failed");
+
+      toast({
+        title: "Withdrawal Submitted! ✅",
+        description: `$${dollarAmt} ≈ ${data.tonAmount.toFixed(4)} TON will be sent to your wallet.`,
+      });
+      setTonWithdrawAmount("");
+      refreshBalance();
+    } catch (err: any) {
+      toast({ title: "Error", description: err?.message || "Withdrawal failed.", variant: "destructive" });
+    } finally {
+      setTonProcessing(false);
+    }
+  };
 
   const handleCurrencySelect = (action: ActionType, currency: CurrencyType) => {
     if (action === "deposit") setDepositMenu(false);
@@ -218,36 +358,76 @@ const WalletScreen = () => {
         </div>
 
         {wallet ? (
-          <div className="space-y-2">
+          <div className="space-y-3">
             <div className="bg-muted/50 border border-border rounded-xl px-3 py-2">
               <p className="text-xs text-muted-foreground">Connected Address</p>
               <p className="text-xs font-mono text-foreground truncate">
                 {tonAddress ? `${tonAddress.slice(0, 6)}...${tonAddress.slice(-6)}` : "Loading..."}
               </p>
+              {tonPrice && (
+                <p className="text-xs text-muted-foreground mt-1">TON Price: ${tonPrice.toFixed(2)}</p>
+              )}
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              <Button
-                variant="outline"
-                className="rounded-xl h-10 text-xs"
-                onClick={() => {
-                  toast({ title: "TON Deposit", description: "TON deposit feature coming soon! Backend integration required." });
-                }}
-              >
-                <ArrowDownLeft className="h-3.5 w-3.5 mr-1" /> TON Deposit
-              </Button>
-              <Button
-                variant="outline"
-                className="rounded-xl h-10 text-xs"
-                onClick={() => {
-                  if (dollarBalance < 10) {
-                    toast({ title: "Minimum $10", description: "You need at least $10 to withdraw via TON.", variant: "destructive" });
-                    return;
-                  }
-                  toast({ title: "TON Withdraw", description: "TON withdrawal feature coming soon! Backend integration required." });
-                }}
-              >
-                <ArrowUpRight className="h-3.5 w-3.5 mr-1" /> TON Withdraw
-              </Button>
+
+            {/* TON Deposit */}
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-foreground">Deposit TON → Get $</p>
+              <div className="flex gap-2">
+                <div className="flex-1 relative">
+                  <Input
+                    type="number"
+                    placeholder="TON amount"
+                    value={tonDepositAmount}
+                    onChange={(e) => setTonDepositAmount(e.target.value)}
+                    className="pr-12 rounded-xl bg-background"
+                    min={0.01}
+                    step={0.01}
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">TON</span>
+                </div>
+                <Button
+                  className="rounded-xl"
+                  disabled={tonProcessing || !tonDepositAmount}
+                  onClick={handleTonDeposit}
+                >
+                  {tonProcessing ? "..." : <ArrowDownLeft className="h-4 w-4" />}
+                </Button>
+              </div>
+              {tonDepositAmount && tonPrice && (
+                <p className="text-xs text-muted-foreground">
+                  ≈ ${(Number(tonDepositAmount) * tonPrice).toFixed(2)} will be added
+                </p>
+              )}
+            </div>
+
+            {/* TON Withdraw */}
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-foreground">Withdraw $ → Get TON</p>
+              <div className="flex gap-2">
+                <div className="flex-1 relative">
+                  <Input
+                    type="number"
+                    placeholder="Min $10"
+                    value={tonWithdrawAmount}
+                    onChange={(e) => setTonWithdrawAmount(e.target.value)}
+                    className="pr-8 rounded-xl bg-background"
+                    min={10}
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">$</span>
+                </div>
+                <Button
+                  className="rounded-xl"
+                  disabled={tonProcessing || !tonWithdrawAmount}
+                  onClick={handleTonWithdraw}
+                >
+                  {tonProcessing ? "..." : <ArrowUpRight className="h-4 w-4" />}
+                </Button>
+              </div>
+              {tonWithdrawAmount && tonPrice && Number(tonWithdrawAmount) >= 10 && (
+                <p className="text-xs text-muted-foreground">
+                  ≈ {(Number(tonWithdrawAmount) / tonPrice).toFixed(4)} TON will be sent
+                </p>
+              )}
             </div>
           </div>
         ) : (
