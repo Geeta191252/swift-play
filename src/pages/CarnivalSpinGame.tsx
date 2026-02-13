@@ -257,7 +257,7 @@ const CarnivalSpinGame = () => {
         <div className="rounded-2xl p-2" style={{ background: "hsla(0, 0%, 15%, 0.9)" }}>
           <div className="flex items-center justify-between rounded-xl overflow-hidden" style={{ background: "hsla(0, 0%, 25%, 0.8)" }}>
             <button
-              onClick={() => { if (phase !== "betting") return; setSelectedBet(prev => { const idx = BET_PRESETS.indexOf(prev); return idx > 0 ? BET_PRESETS[idx - 1] : prev; }); }}
+              onClick={() => { if (phase !== "betting") return; setSelectedBet(prev => Math.max(1, prev - 1)); }}
               disabled={phase !== "betting"}
               className="w-14 h-12 flex items-center justify-center text-2xl font-bold" style={{ color: "hsl(0, 0%, 70%)" }}>−</button>
             <div className="flex-1 text-center">
@@ -266,13 +266,13 @@ const CarnivalSpinGame = () => {
               </span>
             </div>
             <button
-              onClick={() => { if (phase !== "betting") return; setSelectedBet(prev => { const idx = BET_PRESETS.indexOf(prev); return idx < BET_PRESETS.length - 1 ? BET_PRESETS[idx + 1] : prev; }); }}
+              onClick={() => { if (phase !== "betting") return; setSelectedBet(prev => prev + 1); }}
               disabled={phase !== "betting"}
               className="w-14 h-12 flex items-center justify-center text-2xl font-bold" style={{ color: "hsl(0, 0%, 70%)" }}>+</button>
           </div>
           <div className="grid grid-cols-4 gap-2 mt-2">
             {BET_PRESETS.map((bet) => (
-              <button key={bet} onClick={() => phase === "betting" && setSelectedBet(bet)}
+              <button key={bet} onClick={() => phase === "betting" && setSelectedBet(prev => prev + bet)}
                 className={`rounded-xl py-2.5 text-sm font-bold transition-all ${phase !== "betting" ? "opacity-50" : ""}`}
                 style={{
                   background: selectedBet === bet ? "hsl(280, 60%, 50%)" : "hsla(0, 0%, 30%, 0.8)",
