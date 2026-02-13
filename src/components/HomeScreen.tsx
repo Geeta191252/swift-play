@@ -55,7 +55,7 @@ const HomeScreen = () => {
   const goToGreedyKing = () => navigate("/greedy-king");
   const goToDiceMaster = () => navigate("/dice-master");
   const goToCarnivalSpin = () => navigate("/carnival-spin");
-  const goToLuckySlots = () => navigate("/lucky-slots");
+  
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -163,7 +163,7 @@ const HomeScreen = () => {
                   </button>
                 </div>
                 <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-                  <GameTile image={gameSlots} name="Lucky Slots" description="Spin & Win big!" badge="Hot" badgeColor="bg-red-500" delay={0.1} onClick={goToLuckySlots} />
+                  <GameTile image={gameSlots} name="Lucky Slots" description="Spin & Win big!" badge="Hot" badgeColor="bg-red-500" delay={0.1} />
                   <GameTile image={gameDice} name="Dice Master" description="Roll to earn coins" badge="New" delay={0.15} onClick={goToDiceMaster} />
                   <GameTile image={gameGreedyLion} name="Carnival Spin" description="Win prizes daily" delay={0.2} onClick={goToCarnivalSpin} />
                 </div>
