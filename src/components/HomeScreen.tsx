@@ -164,7 +164,6 @@ const HomeScreen = () => {
                 </div>
                 <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
                   <GameTile image={gameDice} name="Dice Master" description="Roll to earn coins" badge="New" delay={0.1} onClick={goToDiceMaster} />
-                  <GameTile image={gameDice} name="Dice Master" description="Roll to earn coins" badge="New" delay={0.15} onClick={goToDiceMaster} />
                   <GameTile image={gameGreedyLion} name="Carnival Spin" description="Win prizes daily" delay={0.15} onClick={goToCarnivalSpin} />
                 </div>
               </section>
