@@ -1,0 +1,347 @@
+import { useState, useCallback, useRef, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Home, Volume2, VolumeX, X } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { playBetSound, playSpinSound, playWinSound, playLoseSound, playResultReveal, startBgMusic, stopBgMusic } from "@/hooks/useGameSounds";
+import { useBalanceContext } from "@/contexts/BalanceContext";
+
+const SEGMENTS = [
+  { label: "2X", multiplier: 2, color: "hsl(0, 70%, 55%)" },
+  { label: "1.5X", multiplier: 1.5, color: "hsl(210, 70%, 55%)" },
+  { label: "3X", multiplier: 3, color: "hsl(45, 90%, 55%)" },
+  { label: "0X", multiplier: 0, color: "hsl(0, 0%, 30%)" },
+  { label: "5X", multiplier: 5, color: "hsl(280, 60%, 55%)" },
+  { label: "1.5X", multiplier: 1.5, color: "hsl(160, 60%, 45%)" },
+  { label: "10X", multiplier: 10, color: "hsl(330, 70%, 50%)" },
+  { label: "0X", multiplier: 0, color: "hsl(0, 0%, 40%)" },
+  { label: "2X", multiplier: 2, color: "hsl(25, 80%, 55%)" },
+  { label: "0.5X", multiplier: 0.5, color: "hsl(190, 60%, 45%)" },
+  { label: "20X", multiplier: 20, color: "hsl(50, 95%, 50%)" },
+  { label: "0X", multiplier: 0, color: "hsl(0, 0%, 35%)" },
+];
+
+const BET_OPTIONS = [10, 100, 1000, 10000];
+
+type GamePhase = "betting" | "spinning" | "result";
+
+const CarnivalSpinGame = () => {
+  const navigate = useNavigate();
+  const [soundOn, setSoundOn] = useState(true);
+  const soundRef = useRef(true);
+  useEffect(() => { soundRef.current = soundOn; }, [soundOn]);
+  const { dollarBalance, starBalance } = useBalanceContext();
+  const [localDollarAdj, setLocalDollarAdj] = useState(0);
+  const [localStarAdj, setLocalStarAdj] = useState(0);
+  const gameDollarBalance = dollarBalance + localDollarAdj;
+  const gameStarBalance = starBalance + localStarAdj;
+  const [activeWallet, setActiveWallet] = useState<"dollar" | "star">("dollar");
+  const [selectedBet, setSelectedBet] = useState(10);
+  const [phase, setPhase] = useState<GamePhase>("betting");
+  const [wheelAngle, setWheelAngle] = useState(0);
+  const [winAmount, setWinAmount] = useState(0);
+  const [totalLost, setTotalLost] = useState(0);
+  const [results, setResults] = useState<string[]>([]);
+  const [round, setRound] = useState(1);
+  const [resultTimer, setResultTimer] = useState(3);
+  const [lastSegment, setLastSegment] = useState<typeof SEGMENTS[0] | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const totalRotationRef = useRef(0);
+
+  useEffect(() => {
+    if (soundOn) startBgMusic();
+    else stopBgMusic();
+    return () => { stopBgMusic(); };
+  }, [soundOn]);
+
+  useEffect(() => {
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, []);
+
+  const currentBalance = activeWallet === "dollar" ? gameDollarBalance : gameStarBalance;
+
+  const spin = () => {
+    if (phase !== "betting" || currentBalance < selectedBet) return;
+
+    // Deduct bet
+    if (activeWallet === "dollar") setLocalDollarAdj(p => p - selectedBet);
+    else setLocalStarAdj(p => p - selectedBet);
+
+    if (soundRef.current) playBetSound();
+    setPhase("spinning");
+    if (soundRef.current) playSpinSound();
+
+    // Rigged: higher chance of landing on 0X or low multipliers
+    const weights = SEGMENTS.map(s => {
+      if (s.multiplier === 0) return 30;
+      if (s.multiplier <= 1.5) return 20;
+      if (s.multiplier <= 2) return 15;
+      if (s.multiplier <= 3) return 8;
+      if (s.multiplier <= 5) return 4;
+      return 1;
+    });
+    const totalWeight = weights.reduce((a, b) => a + b, 0);
+    let r = Math.random() * totalWeight;
+    let winnerIdx = 0;
+    for (let i = 0; i < weights.length; i++) {
+      r -= weights[i];
+      if (r <= 0) { winnerIdx = i; break; }
+    }
+
+    const segmentAngle = 360 / SEGMENTS.length;
+    const extraSpins = 5 + Math.floor(Math.random() * 3);
+    const targetAngle = totalRotationRef.current + (extraSpins * 360) + (360 - winnerIdx * segmentAngle - segmentAngle / 2);
+    totalRotationRef.current = targetAngle;
+    setWheelAngle(targetAngle);
+
+    setTimeout(() => {
+      const seg = SEGMENTS[winnerIdx];
+      if (soundRef.current) playResultReveal();
+      setLastSegment(seg);
+      setResults(prev => [seg.label, ...prev].slice(0, 12));
+      setRound(r => r + 1);
+
+      const prize = Math.floor(selectedBet * seg.multiplier);
+      if (prize > 0) {
+        setWinAmount(prize);
+        setTotalLost(0);
+        if (activeWallet === "dollar") setLocalDollarAdj(p => p + prize);
+        else setLocalStarAdj(p => p + prize);
+        if (prize > selectedBet && soundRef.current) playWinSound();
+      } else {
+        setWinAmount(0);
+        setTotalLost(selectedBet);
+        if (soundRef.current) playLoseSound();
+      }
+
+      setPhase("result");
+      setResultTimer(3);
+      timerRef.current = setInterval(() => {
+        setResultTimer(prev => {
+          if (prev <= 1) {
+            if (timerRef.current) clearInterval(timerRef.current);
+            setPhase("betting");
+            setLastSegment(null);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }, 4000);
+  };
+
+  const segmentAngle = 360 / SEGMENTS.length;
+
+  return (
+    <div className="min-h-screen flex flex-col overflow-y-auto" style={{ background: "linear-gradient(180deg, hsl(280 50% 25%) 0%, hsl(270 60% 12%) 100%)" }}>
+      {/* Top Bar */}
+      <div className="flex items-center justify-between px-3 py-2" style={{ background: "hsla(280, 40%, 35%, 0.5)" }}>
+        <div className="flex items-center gap-1">
+          {[
+            { icon: Home, action: () => navigate("/") },
+            { icon: soundOn ? Volume2 : VolumeX, action: () => setSoundOn(p => !p) },
+          ].map((item, i) => (
+            <button key={i} onClick={item.action} className="h-9 w-9 rounded-lg border-2 flex items-center justify-center"
+              style={{ borderColor: "hsla(280, 40%, 55%, 0.5)", background: "hsla(280, 40%, 40%, 0.3)" }}>
+              <item.icon className="h-4 w-4" style={{ color: "hsl(280, 20%, 85%)" }} />
+            </button>
+          ))}
+        </div>
+        <div className="rounded-lg px-3 py-1.5 text-right" style={{ background: "hsla(0, 0%, 100%, 0.85)" }}>
+          <p className="text-[10px] leading-tight" style={{ color: "hsl(0, 0%, 50%)" }}>Round</p>
+          <p className="font-bold text-sm leading-tight" style={{ color: "hsl(0, 0%, 20%)" }}>#{round}</p>
+        </div>
+      </div>
+
+      {/* Title */}
+      <div className="text-center pt-4 pb-2">
+        <h1 className="text-2xl font-bold" style={{ color: "hsl(45, 90%, 70%)" }}>🎡 Carnival Spin</h1>
+        <p className="text-xs mt-1" style={{ color: "hsl(280, 20%, 70%)" }}>Spin the wheel, win big prizes!</p>
+      </div>
+
+      {/* Wheel */}
+      <div className="flex flex-col items-center px-4 pt-2">
+        <div className="relative w-[280px] h-[280px]">
+          {/* Pointer */}
+          <div className="absolute top-[-12px] left-1/2 -translate-x-1/2 z-30 w-0 h-0"
+            style={{ borderLeft: "10px solid transparent", borderRight: "10px solid transparent", borderTop: "18px solid hsl(45, 90%, 55%)" }} />
+
+          {/* Spinning wheel */}
+          <svg
+            viewBox="0 0 300 300"
+            className="w-full h-full drop-shadow-2xl"
+            style={{
+              transform: `rotate(${wheelAngle}deg)`,
+              transition: phase === "spinning" ? "transform 4s cubic-bezier(0.17, 0.67, 0.12, 0.99)" : "none",
+            }}
+          >
+            {SEGMENTS.map((seg, i) => {
+              const startAngle = (i * segmentAngle - 90) * Math.PI / 180;
+              const endAngle = ((i + 1) * segmentAngle - 90) * Math.PI / 180;
+              const x1 = 150 + 140 * Math.cos(startAngle);
+              const y1 = 150 + 140 * Math.sin(startAngle);
+              const x2 = 150 + 140 * Math.cos(endAngle);
+              const y2 = 150 + 140 * Math.sin(endAngle);
+              const largeArc = segmentAngle > 180 ? 1 : 0;
+              const midAngle = ((i + 0.5) * segmentAngle - 90) * Math.PI / 180;
+              const tx = 150 + 95 * Math.cos(midAngle);
+              const ty = 150 + 95 * Math.sin(midAngle);
+              const textRotation = (i + 0.5) * segmentAngle;
+
+              return (
+                <g key={i}>
+                  <path
+                    d={`M 150 150 L ${x1} ${y1} A 140 140 0 ${largeArc} 1 ${x2} ${y2} Z`}
+                    fill={seg.color}
+                    stroke="hsla(0, 0%, 100%, 0.3)"
+                    strokeWidth="1.5"
+                  />
+                  <text
+                    x={tx} y={ty}
+                    textAnchor="middle"
+                    dominantBaseline="central"
+                    fill="white"
+                    fontWeight="bold"
+                    fontSize="14"
+                    transform={`rotate(${textRotation}, ${tx}, ${ty})`}
+                  >
+                    {seg.label}
+                  </text>
+                </g>
+              );
+            })}
+            {/* Center circle */}
+            <circle cx="150" cy="150" r="30" fill="hsl(0, 0%, 15%)" stroke="hsl(45, 90%, 55%)" strokeWidth="3" />
+            <text x="150" y="150" textAnchor="middle" dominantBaseline="central" fill="hsl(45, 90%, 65%)" fontWeight="bold" fontSize="12">SPIN</text>
+          </svg>
+
+          {/* Decorative lights */}
+          {Array.from({ length: 16 }).map((_, i) => {
+            const angle = (i * 22.5) * Math.PI / 180;
+            const x = 150 + 145 * Math.cos(angle);
+            const y = 150 + 145 * Math.sin(angle);
+            return (
+              <motion.div
+                key={i}
+                animate={{ opacity: [0.4, 1, 0.4] }}
+                transition={{ duration: 0.5, repeat: Infinity, delay: i * 0.1 }}
+                className="absolute w-2 h-2 rounded-full"
+                style={{
+                  left: x * 280 / 300 - 4,
+                  top: y * 280 / 300 - 4,
+                  background: i % 2 === 0 ? "hsl(45, 90%, 65%)" : "hsl(0, 80%, 60%)",
+                }}
+              />
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Result */}
+      <AnimatePresence>
+        {phase === "result" && lastSegment && (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="text-center my-3">
+            {winAmount > selectedBet ? (
+              <p className="text-xl font-bold" style={{ color: "hsl(50, 90%, 65%)" }}>🎉 {lastSegment.label} — Won {winAmount}!</p>
+            ) : winAmount > 0 ? (
+              <p className="text-lg font-bold" style={{ color: "hsl(45, 80%, 60%)" }}>Got {lastSegment.label} — Return {winAmount}</p>
+            ) : (
+              <p className="text-xl font-bold" style={{ color: "hsl(0, 70%, 65%)" }}>💨 {lastSegment.label} — Lost {totalLost}</p>
+            )}
+            <p className="text-xs mt-1" style={{ color: "hsl(0, 0%, 60%)" }}>Next spin in {resultTimer}s</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Bet Amount */}
+      <div className="px-4 mt-2">
+        <div className="rounded-2xl p-3 flex gap-2 justify-center"
+          style={{ background: "linear-gradient(180deg, hsl(200, 65%, 55%), hsl(210, 65%, 45%))" }}>
+          {BET_OPTIONS.map((bet) => {
+            const isActive = selectedBet === bet;
+            return (
+              <button key={bet} onClick={() => phase === "betting" && setSelectedBet(bet)}
+                className={`flex-1 rounded-xl p-2 flex flex-col items-center border-2 transition-all ${phase !== "betting" ? "opacity-50" : ""}`}
+                style={{
+                  borderColor: isActive ? "hsl(50, 90%, 55%)" : "hsla(200, 50%, 70%, 0.4)",
+                  background: isActive ? "hsl(280, 60%, 50%)" : "hsla(200, 50%, 60%, 0.4)",
+                }}>
+                <div className="w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold"
+                  style={{
+                    background: isActive ? "hsl(50, 90%, 55%)" : "hsla(50, 70%, 60%, 0.6)",
+                    color: isActive ? "hsl(280, 50%, 25%)" : "hsl(210, 40%, 20%)",
+                  }}>
+                  {bet >= 1000 ? `${bet / 1000}K` : bet}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Spin Button */}
+      <div className="px-4 mt-3">
+        <motion.button
+          whileTap={{ scale: 0.95 }}
+          onClick={spin}
+          disabled={phase !== "betting" || currentBalance < selectedBet}
+          className="w-full py-4 rounded-2xl text-lg font-bold transition-all"
+          style={{
+            background: phase === "betting"
+              ? "linear-gradient(135deg, hsl(280, 70%, 55%), hsl(320, 70%, 50%))"
+              : "hsla(0, 0%, 50%, 0.3)",
+            color: phase === "betting" ? "white" : "hsl(0, 0%, 60%)",
+          }}
+        >
+          {phase === "betting" ? `🎡 Spin - Bet ${selectedBet}` : phase === "spinning" ? "Spinning..." : `Next in ${resultTimer}s`}
+        </motion.button>
+      </div>
+
+      {/* Wallet */}
+      <div className="px-4 mt-3 flex gap-2 items-center">
+        <div className="flex-1 rounded-full px-3 py-2.5 flex items-center justify-center gap-1.5 border-2"
+          style={{
+            background: "hsla(0, 0%, 100%, 0.9)",
+            borderColor: activeWallet === "star" ? "hsl(45, 90%, 50%)" : "hsl(280, 60%, 55%)",
+          }}>
+          {activeWallet === "star" ? (
+            <>
+              <span className="text-[10px] font-semibold" style={{ color: "hsl(0, 0%, 45%)" }}>Stars</span>
+              <span className="text-base">⭐</span>
+              <span className="font-bold text-sm" style={{ color: "hsl(45, 90%, 45%)" }}>{gameStarBalance.toLocaleString()}</span>
+            </>
+          ) : (
+            <>
+              <span className="text-[10px] font-semibold" style={{ color: "hsl(0, 0%, 45%)" }}>Balance</span>
+              <span className="text-base">💲</span>
+              <span className="font-bold text-sm" style={{ color: "hsl(0, 0%, 15%)" }}>{gameDollarBalance.toLocaleString()}</span>
+            </>
+          )}
+        </div>
+        <button
+          onClick={() => phase === "betting" && setActiveWallet(prev => prev === "dollar" ? "star" : "dollar")}
+          className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 border-2 active:scale-90"
+          style={{ background: "hsla(0, 0%, 100%, 0.95)", borderColor: "hsl(45, 80%, 55%)", opacity: phase !== "betting" ? 0.4 : 1 }}>
+          <span className="text-xs">🔄</span>
+        </button>
+      </div>
+
+      {/* Results */}
+      <div className="px-4 mt-3 mb-6">
+        <div className="rounded-2xl p-3" style={{ background: "hsla(280, 40%, 20%, 0.8)" }}>
+          <span className="text-xs font-bold" style={{ color: "hsl(0, 0%, 90%)" }}>Results History</span>
+          <div className="flex gap-1.5 mt-2 overflow-x-auto scrollbar-hide">
+            {results.length > 0 ? results.map((label, i) => (
+              <div key={i} className="px-2 h-8 rounded-full bg-white flex items-center justify-center flex-shrink-0 border" style={{ borderColor: "hsla(280, 40%, 50%, 0.3)" }}>
+                <span className="text-xs font-bold" style={{ color: "hsl(280, 40%, 30%)" }}>{label}</span>
+              </div>
+            )) : (
+              <p className="text-xs" style={{ color: "hsla(0, 0%, 100%, 0.5)" }}>Spin to see results...</p>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default CarnivalSpinGame;
