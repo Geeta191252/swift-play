@@ -151,7 +151,7 @@ const HomeScreen = () => {
                 <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
                   
                   <GameTile image={greedyKingThumb} name="Greedy King" description="Win more than FruitMachine" delay={0.15} onClick={goToGreedyKing} />
-                  <GameTile image={gameFruitMachine} name="FruitMachine" description="Spin to win!" badge="TOP" badgeColor="bg-orange-500" delay={0.2} />
+                  
                 </div>
               </section>
 
