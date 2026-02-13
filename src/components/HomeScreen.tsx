@@ -13,7 +13,7 @@ import greedyKingThumb from "@/assets/greedy-king-thumb.png";
 import featuredFishing from "@/assets/featured-fishing.jpg";
 import gameGreedyLion from "@/assets/game-greedy-lion.jpg";
 import gameFruitMachine from "@/assets/game-fruit-machine.jpg";
-import gameSlots from "@/assets/game-slots.jpg";
+
 import gameDice from "@/assets/game-dice.jpg";
 
 interface GameTileProps {
@@ -163,9 +163,9 @@ const HomeScreen = () => {
                   </button>
                 </div>
                 <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-                  <GameTile image={gameSlots} name="Lucky Slots" description="Spin & Win big!" badge="Hot" badgeColor="bg-red-500" delay={0.1} />
+                  <GameTile image={gameDice} name="Dice Master" description="Roll to earn coins" badge="New" delay={0.1} onClick={goToDiceMaster} />
                   <GameTile image={gameDice} name="Dice Master" description="Roll to earn coins" badge="New" delay={0.15} onClick={goToDiceMaster} />
-                  <GameTile image={gameGreedyLion} name="Carnival Spin" description="Win prizes daily" delay={0.2} onClick={goToCarnivalSpin} />
+                  <GameTile image={gameGreedyLion} name="Carnival Spin" description="Win prizes daily" delay={0.15} onClick={goToCarnivalSpin} />
                 </div>
               </section>
             </div>
