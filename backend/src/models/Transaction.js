@@ -9,12 +9,12 @@ const transactionSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ["deposit", "withdraw", "bet", "win", "bonus"],
+      enum: ["deposit", "withdraw", "bet", "win", "bonus", "convert", "ton_deposit", "ton_withdraw"],
       required: true,
     },
     currency: {
       type: String,
-      enum: ["dollar", "star"],
+      enum: ["dollar", "star", "ton"],
       required: true,
     },
     amount: {
@@ -29,6 +29,13 @@ const transactionSchema = new mongoose.Schema(
     telegramPaymentId: String,
     description: String,
     game: String,
+    // TON-specific fields
+    tonTxHash: String,
+    tonAmount: Number, // in TON (not nanoTON)
+    tonSenderAddress: String,
+    tonReceiverAddress: String,
+    depositComment: String,
+    usdEquivalent: Number,
   },
   { timestamps: true }
 );
