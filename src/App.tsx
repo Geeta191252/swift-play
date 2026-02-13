@@ -9,7 +9,7 @@ import Index from "./pages/Index";
 import GreedyKingGame from "./pages/GreedyKingGame";
 import DiceMasterGame from "./pages/DiceMasterGame";
 import CarnivalSpinGame from "./pages/CarnivalSpinGame";
-import LuckySlotsGame from "./pages/LuckySlotsGame";
+
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -29,7 +29,7 @@ const App = () => (
               <Route path="/greedy-king" element={<GreedyKingGame />} />
               <Route path="/dice-master" element={<DiceMasterGame />} />
               <Route path="/carnival-spin" element={<CarnivalSpinGame />} />
-              <Route path="/lucky-slots" element={<LuckySlotsGame />} />
+              
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
