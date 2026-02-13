@@ -7,7 +7,7 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { toast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
-import { isTelegramMiniApp, initiatePayment, fetchTransactions, getTelegram, type CurrencyType, type ActionType } from "@/lib/telegram";
+import { isTelegramMiniApp, initiatePayment, fetchTransactions, fetchWinnings, getTelegram, type CurrencyType, type ActionType } from "@/lib/telegram";
 import { useBalanceContext } from "@/contexts/BalanceContext";
 import AmountInputDialog from "./AmountInputDialog";
 
@@ -97,6 +97,18 @@ const WalletScreen = () => {
     placeholderData: fallbackTransactions,
     retry: 1,
   });
+
+  // Fetch winnings (only from game wins)
+  const { data: winnings } = useQuery({
+    queryKey: ["winnings"],
+    queryFn: fetchWinnings,
+    placeholderData: { dollarWinnings: 0, starWinnings: 0 },
+    retry: 1,
+    refetchInterval: 30000,
+  });
+
+  const dollarWinnings = winnings?.dollarWinnings ?? 0;
+  const starWinnings = winnings?.starWinnings ?? 0;
 
   // Fetch TON price
   useQuery({
@@ -447,7 +459,7 @@ const WalletScreen = () => {
           variant="outline"
           className="rounded-xl h-14 w-full border-green-500/30 text-green-500 hover:bg-green-500/10 flex flex-col items-center justify-center gap-0.5"
           onClick={() => {
-            if (dollarBalance < 10) {
+            if (dollarWinnings < 10) {
               toast({ title: "Minimum $10", description: "You need at least $10 in winnings to withdraw.", variant: "destructive" });
               return;
             }
@@ -457,7 +469,7 @@ const WalletScreen = () => {
           <span className="flex items-center text-xs">
             <DollarSign className="h-3.5 w-3.5 mr-0.5" /> Winning Withdraw
           </span>
-          <span className="text-sm font-bold">${dollarBalance.toFixed(2)}</span>
+          <span className="text-sm font-bold">${dollarWinnings.toFixed(2)}</span>
         </Button>
         <Button
           variant="outline"
@@ -470,7 +482,7 @@ const WalletScreen = () => {
           <span className="flex items-center text-xs">
             <Star className="h-3.5 w-3.5 mr-0.5" /> Winning Star Convert
           </span>
-          <span className="text-sm font-bold">⭐ {starBalance.toLocaleString()}</span>
+          <span className="text-sm font-bold">⭐ {starWinnings.toLocaleString()}</span>
         </Button>
       </div>
 

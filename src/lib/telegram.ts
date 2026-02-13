@@ -171,6 +171,26 @@ export const fetchTransactions = async (): Promise<Array<{
 };
 
 /**
+ * Fetch user winnings (only from game wins)
+ */
+export const fetchWinnings = async (): Promise<{ dollarWinnings: number; starWinnings: number }> => {
+  const tg = getTelegram();
+  const userId = tg?.initDataUnsafe?.user?.id;
+
+  const res = await fetch(`${API_BASE_URL}/winnings`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ userId: userId || "demo" }),
+  });
+
+  if (!res.ok) {
+    throw new Error("Failed to fetch winnings");
+  }
+
+  return res.json();
+};
+
+/**
  * Report game result to backend
  */
 export const reportGameResult = async (data: {
