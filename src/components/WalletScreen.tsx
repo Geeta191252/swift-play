@@ -2,7 +2,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowDownLeft, ArrowUpRight, DollarSign, Star, ArrowRightLeft, Wallet, Unplug } from "lucide-react";
 import { useTonConnectUI, useTonWallet, useTonAddress } from "@tonconnect/ui-react";
-import { beginCell } from "@ton/core";
+// @ton/core is dynamically imported where needed to avoid Buffer polyfill issues
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { toast } from "@/hooks/use-toast";
@@ -139,7 +139,8 @@ const WalletScreen = () => {
       // Step 2: Send TON via TonConnect
       const nanoTon = BigInt(Math.floor(tonAmt * 1e9)).toString();
 
-      // Encode comment as BOC using @ton/core for proper TON Connect payload
+      // Dynamically import @ton/core to avoid Buffer issues at module load
+      const { beginCell } = await import("@ton/core");
       const body = beginCell()
         .storeUint(0, 32) // comment opcode
         .storeStringTail(initData.depositComment)
