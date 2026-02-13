@@ -96,33 +96,6 @@ const HomeScreen = () => {
           <motion.div key="games" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
             {/* Content */}
             <div className="px-4 space-y-6 mt-2">
-              {/* Featured */}
-              <section>
-                <h2 className="font-bold text-lg text-foreground mb-3">Featured</h2>
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.4 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="relative rounded-2xl overflow-hidden cursor-pointer"
-                >
-                  <img src={featuredFishing} alt="Fishing Star 2" className="w-full h-44 object-cover" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-                  <div className="absolute top-3 left-3 flex gap-2">
-                    <span className="bg-green-500 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full">New</span>
-                    <span className="bg-secondary text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full">Fishing</span>
-                  </div>
-                  <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between">
-                    <div>
-                      <h3 className="font-bold text-foreground text-base">Fishing Star 2</h3>
-                      <p className="text-[11px] text-foreground/70">New fishing star is coming</p>
-                    </div>
-                    <button className="bg-foreground text-background text-xs font-bold px-4 py-2 rounded-full">
-                      Play
-                    </button>
-                  </div>
-                </motion.div>
-              </section>
 
               {/* Recently Played */}
               <section>
