@@ -9,6 +9,7 @@ import FriendsScreen from "./FriendsScreen";
 import WalletScreen from "./WalletScreen";
 
 import gameLogo from "@/assets/game-logo.jpg";
+import greedyKingThumb from "@/assets/greedy-king-thumb.png";
 import featuredFishing from "@/assets/featured-fishing.jpg";
 import gameGreedyLion from "@/assets/game-greedy-lion.jpg";
 import gameFruitMachine from "@/assets/game-fruit-machine.jpg";
@@ -124,7 +125,7 @@ const HomeScreen = () => {
                 <h2 className="font-bold text-lg text-foreground mb-3">Recently Played</h2>
                 <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
                   <GameTile
-                    image={gameLogo}
+                    image={greedyKingThumb}
                     name="Greedy King"
                     description="Win more than FruitMachine"
                     badge="Wheel"
@@ -145,7 +146,7 @@ const HomeScreen = () => {
                 </div>
                 <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
                   <GameTile image={gameGreedyLion} name="Greedy Lion" description="Spin to win 45" badge="New" delay={0.1} />
-                  <GameTile image={gameLogo} name="Greedy King" description="Win more than FruitMachine" delay={0.15} onClick={goToGreedyKing} />
+                  <GameTile image={greedyKingThumb} name="Greedy King" description="Win more than FruitMachine" delay={0.15} onClick={goToGreedyKing} />
                   <GameTile image={gameFruitMachine} name="FruitMachine" description="Spin to win!" badge="TOP" badgeColor="bg-orange-500" delay={0.2} />
                 </div>
               </section>
