@@ -15,6 +15,7 @@ import gameGreedyLion from "@/assets/game-greedy-lion.jpg";
 import gameFruitMachine from "@/assets/game-fruit-machine.jpg";
 
 import gameDice from "@/assets/game-dice.jpg";
+import gameCarnivalSpin from "@/assets/game-carnival-spin.jpg";
 
 interface GameTileProps {
   image: string;
@@ -164,7 +165,7 @@ const HomeScreen = () => {
                 </div>
                 <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
                   <GameTile image={gameDice} name="Dice Master" description="Roll to earn coins" badge="New" delay={0.1} onClick={goToDiceMaster} />
-                  <GameTile image={gameGreedyLion} name="Carnival Spin" description="Win prizes daily" delay={0.15} onClick={goToCarnivalSpin} />
+                  <GameTile image={gameCarnivalSpin} name="Carnival Spin" description="Win prizes daily" delay={0.15} onClick={goToCarnivalSpin} />
                 </div>
               </section>
             </div>
