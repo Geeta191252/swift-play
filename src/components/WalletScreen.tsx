@@ -555,9 +555,13 @@ const WalletScreen = () => {
         {transactions.map((tx: any, i: number) => {
             const isCancelled = tx.status === "failed" || tx.status === "refunded";
             const isPositive = !isCancelled && (tx.type === "win" || tx.type === "bonus" || tx.type === "deposit" || tx.type === "ton_deposit");
-            const currencySymbol = tx.currency === "dollar" || tx.currency === "💲" || tx.type === "ton_deposit" ? "$" : "⭐";
-            const amountStr = String(tx.amount);
-            const rawAmount = amountStr.replace(/^[+-]/, "");
+            const isTonTx = tx.type === "ton_deposit" || tx.type === "ton_withdraw";
+            const currencySymbol = "$";
+            // For TON transactions, show USD equivalent instead of TON amount
+            const displayValue = isTonTx && tx.usdEquivalent
+              ? Number(tx.usdEquivalent).toFixed(2)
+              : String(tx.amount).replace(/^[+-]/, "");
+            const rawAmount = displayValue;
             const displayAmount = isCancelled
               ? rawAmount
               : (isPositive ? "+" : "-") + rawAmount;
