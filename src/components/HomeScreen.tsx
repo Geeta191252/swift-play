@@ -44,8 +44,8 @@ const GameTile = ({ image, name, description, badge, badgeColor = "bg-green-500"
         </span>
       )}
     </div>
-    <h4 className="font-bold text-sm text-foreground truncate">{name}</h4>
-    <p className="text-[11px] text-muted-foreground truncate">{description}</p>
+    <h4 className="font-bold text-sm truncate" style={{ color: "hsl(0 0% 95%)" }}>{name}</h4>
+    <p className="text-[11px] truncate" style={{ color: "hsl(0 0% 70%)" }}>{description}</p>
   </motion.div>
 );
 
@@ -68,25 +68,39 @@ const HomeScreen = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen pb-20" style={{
+      background: "linear-gradient(180deg, hsl(260 60% 30%) 0%, hsl(280 50% 20%) 30%, hsl(320 40% 18%) 60%, hsl(350 45% 15%) 100%)",
+    }}>
       {/* Top Bar */}
-      <div className="sticky top-0 z-30 bg-background/90 backdrop-blur-md px-3 py-2.5 flex items-center justify-between">
+      <div className="sticky top-0 z-30 backdrop-blur-md px-3 py-2.5 flex items-center justify-between" style={{
+        background: "hsla(260, 50%, 25%, 0.85)",
+        borderBottom: "1px solid hsla(45, 80%, 50%, 0.2)",
+      }}>
         <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide">
-          <div className="flex items-center gap-1 bg-card rounded-full px-2 py-1 shrink-0">
+          <div className="flex items-center gap-1 rounded-full px-2.5 py-1 shrink-0" style={{
+            background: "linear-gradient(135deg, hsl(45 80% 50%), hsl(35 70% 40%))",
+          }}>
             <span className="text-[10px]">💲</span>
-            <span className="font-bold text-[10px] text-foreground">${dollarBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            <span className="font-bold text-[10px]" style={{ color: "hsl(0 0% 10%)" }}>${dollarBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
           </div>
-          <div className="flex items-center gap-1 bg-card rounded-full px-2 py-1 shrink-0">
+          <div className="flex items-center gap-1 rounded-full px-2.5 py-1 shrink-0" style={{
+            background: "linear-gradient(135deg, hsl(200 70% 50%), hsl(220 60% 45%))",
+          }}>
             <span className="text-[10px]">⭐</span>
-            <span className="font-bold text-[10px] text-foreground">Star {starBalance.toLocaleString()}</span>
+            <span className="font-bold text-[10px]" style={{ color: "hsl(0 0% 100%)" }}>Star {starBalance.toLocaleString()}</span>
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <div className="h-9 w-9 rounded-xl bg-primary/20 flex items-center justify-center">
-            <ShoppingCart className="h-4 w-4 text-primary" />
+          <div className="h-9 w-9 rounded-xl flex items-center justify-center" style={{
+            background: "linear-gradient(135deg, hsl(280 60% 55%), hsl(320 50% 45%))",
+          }}>
+            <ShoppingCart className="h-4 w-4" style={{ color: "hsl(0 0% 100%)" }} />
           </div>
-          <div className="h-9 w-9 rounded-xl overflow-hidden border-2 border-primary/40">
-            <User className="h-full w-full p-1.5 text-muted-foreground" />
+          <div className="h-9 w-9 rounded-xl overflow-hidden" style={{
+            border: "2px solid hsl(45 80% 55%)",
+            background: "linear-gradient(135deg, hsl(260 40% 35%), hsl(280 30% 25%))",
+          }}>
+            <User className="h-full w-full p-1.5" style={{ color: "hsl(45 80% 70%)" }} />
           </div>
         </div>
       </div>
@@ -99,7 +113,7 @@ const HomeScreen = () => {
 
               {/* Recently Played */}
               <section>
-                <h2 className="font-bold text-lg text-foreground mb-3">Recently Played</h2>
+                <h2 className="font-bold text-lg mb-3" style={{ color: "hsl(45 90% 70%)" }}>🎮 Recently Played</h2>
                 <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
                   <GameTile
                     image={greedyKingThumb}
@@ -116,8 +130,8 @@ const HomeScreen = () => {
               {/* Wheel Category */}
               <section>
                 <div className="flex items-center justify-between mb-3">
-                  <h2 className="font-bold text-lg text-foreground">Wheel</h2>
-                  <button className="flex items-center gap-1 text-sm text-muted-foreground">
+                  <h2 className="font-bold text-lg" style={{ color: "hsl(280 70% 75%)" }}>🎡 Wheel</h2>
+                  <button className="flex items-center gap-1 text-sm" style={{ color: "hsl(45 80% 65%)" }}>
                     View all <ChevronRight className="h-4 w-4" />
                   </button>
                 </div>
@@ -131,8 +145,8 @@ const HomeScreen = () => {
               {/* Slots Category */}
               <section>
                 <div className="flex items-center justify-between mb-3">
-                  <h2 className="font-bold text-lg text-foreground">Slots</h2>
-                  <button className="flex items-center gap-1 text-sm text-muted-foreground">
+                  <h2 className="font-bold text-lg" style={{ color: "hsl(0 70% 70%)" }}>🎰 Slots</h2>
+                  <button className="flex items-center gap-1 text-sm" style={{ color: "hsl(45 80% 65%)" }}>
                     View all <ChevronRight className="h-4 w-4" />
                   </button>
                 </div>
