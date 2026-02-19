@@ -106,8 +106,9 @@ const CarnivalSpinGame = () => {
       setRound(r => r + 1);
 
       const prize = Math.floor(selectedBet * seg.multiplier);
+      const netProfit = prize - selectedBet; // Net profit after bet deduction
       if (prize > 0) {
-        setWinAmount(prize);
+        setWinAmount(netProfit); // Show net profit, not gross
         setTotalLost(0);
         if (activeWallet === "dollar") setLocalDollarAdj(p => p + prize);
         else setLocalStarAdj(p => p + prize);
