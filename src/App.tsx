@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import GreedyKingGame from "./pages/GreedyKingGame";
 import DiceMasterGame from "./pages/DiceMasterGame";
 import CarnivalSpinGame from "./pages/CarnivalSpinGame";
+import MinesGame from "./pages/MinesGame";
 
 import NotFound from "./pages/NotFound";
 
@@ -29,6 +30,7 @@ const App = () => (
               <Route path="/greedy-king" element={<GreedyKingGame />} />
               <Route path="/dice-master" element={<DiceMasterGame />} />
               <Route path="/carnival-spin" element={<CarnivalSpinGame />} />
+              <Route path="/mines" element={<MinesGame />} />
               
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
