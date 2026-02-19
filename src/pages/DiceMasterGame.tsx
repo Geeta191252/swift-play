@@ -103,8 +103,7 @@ const DiceMasterGame = () => {
       if (won) {
         const mult = DICE_FACES.find(f => f.value === selectedDice)!.multiplier;
         prize = selectedBet * mult;
-        const netProfit = prize - selectedBet;
-        setWinAmount(netProfit);
+        setWinAmount(prize);
         setTotalLost(0);
         if (activeWallet === "dollar") setLocalDollarAdj(p => p + prize);
         else setLocalStarAdj(p => p + prize);
