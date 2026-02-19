@@ -88,9 +88,13 @@ const CarnivalSpinGame = () => {
       if (r <= 0) { winnerIdx = i; break; }
     }
 
-    const segmentAngle = 360 / SEGMENTS.length;
+    const segAngle = 360 / SEGMENTS.length;
     const extraSpins = 5 + Math.floor(Math.random() * 3);
-    const targetAngle = totalRotationRef.current + (extraSpins * 360) + (360 - winnerIdx * segmentAngle - segmentAngle / 2);
+    // Calculate the absolute angle where the winning segment's center aligns with the top pointer
+    const targetSegAngle = (360 - winnerIdx * segAngle - segAngle / 2 + 360) % 360;
+    const currentMod = totalRotationRef.current % 360;
+    const additionalRotation = (targetSegAngle - currentMod + 360) % 360;
+    const targetAngle = totalRotationRef.current + extraSpins * 360 + additionalRotation;
     totalRotationRef.current = targetAngle;
     setWheelAngle(targetAngle);
 
