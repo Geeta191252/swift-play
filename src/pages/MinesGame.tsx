@@ -106,7 +106,8 @@ const MinesGame = () => {
       // Auto-win if all safe cells revealed
       if (newSafePicks >= TOTAL_CELLS - mineCount) {
         const prize = Math.floor(selectedBet * mult * 100) / 100;
-        setWinAmount(prize);
+        const netProfit = Math.floor((prize - selectedBet) * 100) / 100;
+        setWinAmount(netProfit);
         if (activeWallet === "dollar") setLocalDollarAdj(p => p + prize);
         else setLocalStarAdj(p => p + prize);
         setPhase("cashed");
@@ -122,7 +123,8 @@ const MinesGame = () => {
   const cashOut = useCallback(() => {
     if (phase !== "playing" || safePicks === 0) return;
     const prize = Math.floor(selectedBet * currentMultiplier * 100) / 100;
-    setWinAmount(prize);
+    const netProfit = Math.floor((prize - selectedBet) * 100) / 100;
+    setWinAmount(netProfit);
     if (activeWallet === "dollar") setLocalDollarAdj(p => p + prize);
     else setLocalStarAdj(p => p + prize);
 

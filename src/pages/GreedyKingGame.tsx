@@ -175,7 +175,7 @@ const GreedyKingGame = () => {
           const amount = betOnWinner * won.multiplier;
           const lostOnOthers = totalBet - betOnWinner;
           const netProfit = amount - lostOnOthers;
-          setWinAmount(amount);
+          setWinAmount(netProfit);
           setTotalLost(lostOnOthers);
           if (activeWallet === "dollar") {
             setLocalDollarAdj(g => g + amount);
