@@ -106,13 +106,12 @@ const CarnivalSpinGame = () => {
       setRound(r => r + 1);
 
       const prize = Math.round(selectedBet * seg.multiplier * 100) / 100;
-      const netProfit = Math.round((prize - selectedBet) * 100) / 100;
       if (seg.multiplier > 0) {
-        setWinAmount(netProfit); // Show net profit
+        setWinAmount(prize); // Show gross payout (bet × multiplier)
         setTotalLost(0);
         if (activeWallet === "dollar") setLocalDollarAdj(p => p + prize);
         else setLocalStarAdj(p => p + prize);
-        if (netProfit > 0 && soundRef.current) playWinSound();
+        if (prize > 0 && soundRef.current) playWinSound();
       } else {
         setWinAmount(0);
         setTotalLost(selectedBet);
@@ -249,10 +248,8 @@ const CarnivalSpinGame = () => {
       <AnimatePresence>
         {phase === "result" && lastSegment && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="text-center my-3">
-            {winAmount > 0 ? (
+          {winAmount > 0 ? (
               <p className="text-xl font-bold" style={{ color: "hsl(50, 90%, 65%)" }}>🎉 {lastSegment.label} — Won {winAmount}!</p>
-            ) : lastSegment.multiplier > 0 && winAmount === 0 ? (
-              <p className="text-lg font-bold" style={{ color: "hsl(45, 80%, 60%)" }}>Got {lastSegment.label} — Break Even</p>
             ) : (
               <p className="text-xl font-bold" style={{ color: "hsl(0, 70%, 65%)" }}>💨 {lastSegment.label} — Lost {totalLost}</p>
             )}
