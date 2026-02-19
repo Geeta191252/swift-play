@@ -4,6 +4,7 @@ import { Home, Volume2, VolumeX, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { playBetSound, playSpinSound, playWinSound, playLoseSound, playResultReveal, startBgMusic, stopBgMusic } from "@/hooks/useGameSounds";
 import { useBalanceContext } from "@/contexts/BalanceContext";
+import { reportGameResult } from "@/lib/telegram";
 
 const SEGMENTS = [
   { label: "2X", multiplier: 2, color: "hsl(0, 70%, 55%)" },
@@ -29,7 +30,7 @@ const CarnivalSpinGame = () => {
   const [soundOn, setSoundOn] = useState(true);
   const soundRef = useRef(true);
   useEffect(() => { soundRef.current = soundOn; }, [soundOn]);
-  const { dollarBalance, starBalance } = useBalanceContext();
+  const { dollarBalance, starBalance, refreshBalance } = useBalanceContext();
   const [localDollarAdj, setLocalDollarAdj] = useState(0);
   const [localStarAdj, setLocalStarAdj] = useState(0);
   const gameDollarBalance = dollarBalance + localDollarAdj;
@@ -112,6 +113,9 @@ const CarnivalSpinGame = () => {
         setTotalLost(selectedBet);
         if (soundRef.current) playLoseSound();
       }
+      // Report result to backend
+      reportGameResult({ betAmount: selectedBet, winAmount: prize, currency: activeWallet, game: "carnival-spin" })
+        .then(() => refreshBalance()).catch(console.error);
 
       setPhase("result");
       setResultTimer(3);

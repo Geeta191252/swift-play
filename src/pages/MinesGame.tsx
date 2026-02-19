@@ -4,6 +4,7 @@ import { Home, Volume2, VolumeX, Bomb, Diamond } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { playBetSound, playWinSound, playLoseSound, playResultReveal, startBgMusic, stopBgMusic } from "@/hooks/useGameSounds";
 import { useBalanceContext } from "@/contexts/BalanceContext";
+import { reportGameResult } from "@/lib/telegram";
 
 const GRID_SIZE = 5;
 const TOTAL_CELLS = GRID_SIZE * GRID_SIZE;
@@ -28,7 +29,7 @@ const MinesGame = () => {
   const soundRef = useRef(true);
   useEffect(() => { soundRef.current = soundOn; }, [soundOn]);
 
-  const { dollarBalance, starBalance } = useBalanceContext();
+  const { dollarBalance, starBalance, refreshBalance } = useBalanceContext();
   const [localDollarAdj, setLocalDollarAdj] = useState(0);
   const [localStarAdj, setLocalStarAdj] = useState(0);
   const gameDollarBalance = dollarBalance + localDollarAdj;
@@ -89,6 +90,9 @@ const MinesGame = () => {
       setPhase("lost");
       if (soundRef.current) playLoseSound();
       setRound(r => r + 1);
+      // Report loss to backend
+      reportGameResult({ betAmount: selectedBet, winAmount: 0, currency: activeWallet, game: "mines" })
+        .then(() => refreshBalance()).catch(console.error);
     } else {
       // Safe pick
       newGrid[index] = "safe";
@@ -108,6 +112,9 @@ const MinesGame = () => {
         setPhase("cashed");
         if (soundRef.current) playWinSound();
         setRound(r => r + 1);
+        // Report win to backend
+        reportGameResult({ betAmount: selectedBet, winAmount: prize, currency: activeWallet, game: "mines" })
+          .then(() => refreshBalance()).catch(console.error);
       }
     }
   }, [phase, grid, minePositions, safePicks, mineCount, selectedBet, activeWallet]);
@@ -127,7 +134,10 @@ const MinesGame = () => {
     setPhase("cashed");
     if (soundRef.current) playWinSound();
     setRound(r => r + 1);
-  }, [phase, safePicks, selectedBet, currentMultiplier, activeWallet, grid, minePositions]);
+    // Report cashout win to backend
+    reportGameResult({ betAmount: selectedBet, winAmount: prize, currency: activeWallet, game: "mines" })
+      .then(() => refreshBalance()).catch(console.error);
+  }, [phase, safePicks, selectedBet, currentMultiplier, activeWallet, grid, minePositions, refreshBalance]);
 
   const nextMultiplier = phase === "playing" ? getMultiplier(safePicks + 1, mineCount) : 1;
 
