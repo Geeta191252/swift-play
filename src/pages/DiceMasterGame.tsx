@@ -99,9 +99,10 @@ const DiceMasterGame = () => {
 
       // Check win: if either die matches selected
       const won = d1 === selectedDice || d2 === selectedDice;
+      let prize = 0;
       if (won) {
         const mult = DICE_FACES.find(f => f.value === selectedDice)!.multiplier;
-        const prize = selectedBet * mult;
+        prize = selectedBet * mult;
         setWinAmount(prize);
         setTotalLost(0);
         if (activeWallet === "dollar") setLocalDollarAdj(p => p + prize);
@@ -112,6 +113,9 @@ const DiceMasterGame = () => {
         setTotalLost(selectedBet);
         if (soundRef.current) playLoseSound();
       }
+      // Report result to backend
+      reportGameResult({ betAmount: selectedBet, winAmount: prize, currency: activeWallet, game: "dice-master" })
+        .then(() => refreshBalance()).catch(console.error);
 
       setPhase("result");
       setResultTimer(3);
