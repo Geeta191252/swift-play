@@ -13,6 +13,11 @@ import AmountInputDialog from "./AmountInputDialog";
 
 const STAR_TO_DOLLAR_RATE = 100; // 100 ⭐ = $1
 
+// Approximate minimum USD deposits per crypto (from NOWPayments)
+const cryptoMins: Record<string, number> = {
+  usdt: 1, btc: 18, eth: 5, ltc: 1, ton: 1, sol: 1, trx: 1, doge: 1,
+};
+
 const fallbackTransactions = [
   { type: "win", game: "Greedy King", amount: "+250", currency: "💲", time: "2 min ago" },
   { type: "bet", game: "Greedy King", amount: "-100", currency: "💲", time: "5 min ago" },
@@ -254,8 +259,9 @@ const WalletScreen = () => {
   // ---- Crypto (NOWPayments) Deposit Handler ----
   const handleCryptoDeposit = async () => {
     const usdAmt = Number(cryptoAmount);
-    if (!usdAmt || usdAmt < 1) {
-      toast({ title: "Invalid amount", description: "Minimum $1 deposit.", variant: "destructive" });
+    const minAmount = cryptoMins[cryptoCurrency] || 1;
+    if (!usdAmt || usdAmt < minAmount) {
+      toast({ title: "Invalid amount", description: `Minimum $${minAmount} deposit for ${cryptoCurrency.toUpperCase()}.`, variant: "destructive" });
       return;
     }
 
@@ -538,11 +544,11 @@ const WalletScreen = () => {
           <div className="flex-1 relative">
             <Input
               type="number"
-              placeholder="USD amount (min $1)"
+              placeholder={`USD amount (min $${cryptoMins[cryptoCurrency] || 1})`}
               value={cryptoAmount}
               onChange={(e) => setCryptoAmount(e.target.value)}
               className="pr-8 rounded-xl bg-background"
-              min={1}
+              min={cryptoMins[cryptoCurrency] || 1}
             />
             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">$</span>
           </div>
