@@ -21,7 +21,7 @@ const cryptoApiTicker: Record<string, string> = {
 
 // Minimum USD deposits per crypto - these are display hints only, backend validates actual minimums
 const cryptoMins: Record<string, number> = {
-  usdt: 15, btc: 18, eth: 5, ltc: 4, ton: 4, sol: 4, trx: 4, doge: 6,
+  btc: 18, ltc: 4, ton: 4, sol: 4, trx: 4, doge: 6,
 };
 
 const fallbackTransactions = [
@@ -98,7 +98,7 @@ const WalletScreen = () => {
 
   // Crypto (NOWPayments) state
   const [cryptoAmount, setCryptoAmount] = useState("");
-  const [cryptoCurrency, setCryptoCurrency] = useState("usdt");
+  const [cryptoCurrency, setCryptoCurrency] = useState("btc");
   const [cryptoProcessing, setCryptoProcessing] = useState(false);
   const [cryptoPayment, setCryptoPayment] = useState<{
     payAddress: string;
@@ -440,113 +440,6 @@ const WalletScreen = () => {
         </motion.div>
       </div>
 
-      {/* TON Wallet */}
-      <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.08 }}
-        className="bg-card border border-border rounded-2xl p-4 space-y-3"
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Wallet className="h-4 w-4 text-primary" />
-            <h3 className="font-semibold text-sm text-foreground">TON Wallet</h3>
-          </div>
-          {wallet ? (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-xs text-destructive hover:text-destructive"
-              onClick={() => tonConnectUI.disconnect()}
-            >
-              <Unplug className="h-3 w-3 mr-1" /> Disconnect
-            </Button>
-          ) : null}
-        </div>
-
-        {wallet ? (
-          <div className="space-y-3">
-            <div className="bg-muted/50 border border-border rounded-xl px-3 py-2">
-              <p className="text-xs text-muted-foreground">Connected Address</p>
-              <p className="text-xs font-mono text-foreground truncate">
-                {tonAddress ? `${tonAddress.slice(0, 6)}...${tonAddress.slice(-6)}` : "Loading..."}
-              </p>
-              {tonPrice && (
-                <p className="text-xs text-muted-foreground mt-1">TON Price: ${tonPrice.toFixed(2)}</p>
-              )}
-            </div>
-
-            {/* TON Deposit */}
-            <div className="space-y-2">
-              <p className="text-xs font-medium text-foreground">Deposit TON → Get $</p>
-              <div className="flex gap-2">
-                <div className="flex-1 relative">
-                  <Input
-                    type="number"
-                    placeholder="TON amount"
-                    value={tonDepositAmount}
-                    onChange={(e) => setTonDepositAmount(e.target.value)}
-                    className="pr-12 rounded-xl bg-background"
-                    min={0.01}
-                    step={0.01}
-                  />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">TON</span>
-                </div>
-                <Button
-                  className="rounded-xl"
-                  disabled={tonProcessing || !tonDepositAmount}
-                  onClick={handleTonDeposit}
-                >
-                  {tonProcessing ? "..." : <ArrowDownLeft className="h-4 w-4" />}
-                </Button>
-              </div>
-              {tonDepositAmount && tonPrice && (
-                <p className="text-xs text-muted-foreground">
-                  ≈ ${(Number(tonDepositAmount) * tonPrice).toFixed(2)} will be added
-                </p>
-              )}
-            </div>
-
-            {/* TON Withdraw */}
-            <div className="space-y-2">
-              <p className="text-xs font-medium text-foreground">Withdraw $ → Get TON</p>
-              <div className="flex gap-2">
-                <div className="flex-1 relative">
-                  <Input
-                    type="number"
-                    placeholder="Min $10"
-                    value={tonWithdrawAmount}
-                    onChange={(e) => setTonWithdrawAmount(e.target.value)}
-                    className="pr-8 rounded-xl bg-background"
-                    min={10}
-                  />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">$</span>
-                </div>
-                <Button
-                  className="rounded-xl"
-                  disabled={tonProcessing || !tonWithdrawAmount}
-                  onClick={handleTonWithdraw}
-                >
-                  {tonProcessing ? "..." : <ArrowUpRight className="h-4 w-4" />}
-                </Button>
-              </div>
-              {tonWithdrawAmount && tonPrice && Number(tonWithdrawAmount) >= 10 && (
-                <p className="text-xs text-muted-foreground">
-                  ≈ {(Number(tonWithdrawAmount) / tonPrice).toFixed(4)} TON will be sent
-                </p>
-              )}
-            </div>
-          </div>
-        ) : (
-          <Button
-            className="w-full rounded-xl h-11"
-            onClick={() => tonConnectUI.openModal()}
-          >
-            <Wallet className="h-4 w-4 mr-2" /> Connect TON Wallet
-          </Button>
-        )}
-      </motion.div>
-
       {/* Crypto Deposit (NOWPayments) */}
       <motion.div
         initial={{ opacity: 0, y: 16 }}
@@ -563,7 +456,7 @@ const WalletScreen = () => {
 
         {/* Crypto selector */}
         <div className="flex flex-wrap gap-1.5">
-          {["usdt", "btc", "eth", "ltc", "ton", "sol", "trx", "doge"].map((coin) => (
+          {["btc", "ltc", "ton", "sol", "trx", "doge"].map((coin) => (
             <button
               key={coin}
               onClick={() => setCryptoCurrency(coin)}
@@ -700,18 +593,8 @@ const WalletScreen = () => {
         </Button>
       </div>
 
-      {/* Deposit & Withdraw */}
-      <div className="grid grid-cols-2 gap-3">
-        <Button
-          variant="outline"
-          className="rounded-xl h-12 w-full"
-          onClick={() => {
-            const el = document.getElementById("crypto-deposit");
-            el?.scrollIntoView({ behavior: "smooth" });
-          }}
-        >
-          <ArrowDownLeft className="h-4 w-4 mr-2" /> Deposit
-        </Button>
+      {/* Withdraw */}
+      <div className="grid grid-cols-1 gap-3">
         <Button
           variant="outline"
           className="rounded-xl h-12 w-full"
