@@ -18,9 +18,9 @@ const cryptoApiTicker: Record<string, string> = {
   usdt: "usdttrc20", // USDT on TRC20 network
 };
 
-// Approximate minimum USD deposits per crypto (from NOWPayments)
+// Minimum USD deposits per crypto - these are display hints only, backend validates actual minimums
 const cryptoMins: Record<string, number> = {
-  usdt: 15, btc: 18, eth: 5, ltc: 4, ton: 2, sol: 4, trx: 4, doge: 5,
+  usdt: 15, btc: 18, eth: 5, ltc: 4, ton: 4, sol: 4, trx: 4, doge: 6,
 };
 
 const fallbackTransactions = [
@@ -264,9 +264,8 @@ const WalletScreen = () => {
   // ---- Crypto (NOWPayments) Deposit Handler ----
   const handleCryptoDeposit = async () => {
     const usdAmt = Number(cryptoAmount);
-    const minAmount = cryptoMins[cryptoCurrency] || 1;
-    if (!usdAmt || usdAmt < minAmount) {
-      toast({ title: "Invalid amount", description: `Minimum $${minAmount} deposit for ${cryptoCurrency.toUpperCase()}.`, variant: "destructive" });
+    if (!usdAmt || usdAmt < 1) {
+      toast({ title: "Invalid amount", description: "Please enter a valid USD amount.", variant: "destructive" });
       return;
     }
 
