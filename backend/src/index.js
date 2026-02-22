@@ -623,6 +623,190 @@ app.post("/api/winnings", async (req, res) => {
   }
 });
 
+// ============================================
+// NOWPayments Crypto Payment Gateway
+// ============================================
+const NOWPAYMENTS_API_KEY = process.env.NOWPAYMENTS_API_KEY || "";
+const NOWPAYMENTS_IPN_SECRET = process.env.NOWPAYMENTS_IPN_SECRET || "";
+const NOWPAYMENTS_API = "https://api.nowpayments.io/v1";
+
+// POST /api/crypto/create-payment - Create NOWPayments invoice
+app.post("/api/crypto/create-payment", async (req, res) => {
+  try {
+    const { userId, amount, currency } = req.body;
+    // amount = USD amount user wants to deposit
+    // currency = crypto they want to pay with (btc, eth, ltc, usdt, ton, etc.)
+    if (!userId || !amount || !currency) {
+      return res.status(400).json({ error: "Missing userId, amount, or currency" });
+    }
+    if (!NOWPAYMENTS_API_KEY) {
+      return res.status(500).json({ error: "NOWPayments not configured" });
+    }
+
+    const orderId = `dep_${userId}_${Date.now()}`;
+
+    const npRes = await fetch(`${NOWPAYMENTS_API}/invoice`, {
+      method: "POST",
+      headers: {
+        "x-api-key": NOWPAYMENTS_API_KEY,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        price_amount: amount,
+        price_currency: "usd",
+        pay_currency: currency,
+        order_id: orderId,
+        order_description: `Deposit $${amount} for user ${userId}`,
+        ipn_callback_url: `${process.env.KOYEB_URL || "https://broken-bria-chetan1-ea890b93.koyeb.app"}/api/crypto/ipn`,
+        success_url: `${process.env.KOYEB_URL || "https://broken-bria-chetan1-ea890b93.koyeb.app"}`,
+        cancel_url: `${process.env.KOYEB_URL || "https://broken-bria-chetan1-ea890b93.koyeb.app"}`,
+      }),
+    });
+
+    const npData = await npRes.json();
+    if (!npRes.ok) {
+      console.error("NOWPayments error:", npData);
+      throw new Error(npData.message || "Failed to create payment");
+    }
+
+    // Save pending transaction
+    await Transaction.create({
+      telegramId: Number(userId),
+      type: "deposit",
+      currency: "dollar",
+      amount: amount,
+      status: "pending",
+      description: `Crypto Deposit: $${amount} via ${currency.toUpperCase()}`,
+      depositComment: orderId,
+      tonTxHash: String(npData.id), // reuse field to store nowpayments invoice id
+    });
+
+    return res.json({
+      invoiceUrl: npData.invoice_url,
+      invoiceId: npData.id,
+      orderId,
+    });
+  } catch (error) {
+    console.error("Crypto create-payment error:", error);
+    return res.status(500).json({ error: error.message || "Failed to create crypto payment" });
+  }
+});
+
+// POST /api/crypto/ipn - NOWPayments IPN (Instant Payment Notification) callback
+app.post("/api/crypto/ipn", async (req, res) => {
+  try {
+    const data = req.body;
+    console.log("📩 NOWPayments IPN:", JSON.stringify(data));
+
+    // Verify IPN signature if secret is set
+    if (NOWPAYMENTS_IPN_SECRET) {
+      const crypto = require("crypto");
+      const sortedData = Object.keys(data).sort().reduce((r, k) => {
+        if (k !== "signature") r[k] = data[k];
+        return r;
+      }, {});
+      const hmac = crypto.createHmac("sha512", NOWPAYMENTS_IPN_SECRET)
+        .update(JSON.stringify(sortedData))
+        .digest("hex");
+      if (hmac !== data.signature) {
+        console.error("❌ IPN signature mismatch");
+        return res.status(400).json({ error: "Invalid signature" });
+      }
+    }
+
+    const { order_id, payment_status, price_amount } = data;
+
+    if (!order_id) {
+      return res.status(400).json({ error: "Missing order_id" });
+    }
+
+    // Find matching pending transaction
+    const tx = await Transaction.findOne({ depositComment: order_id, status: "pending" });
+    if (!tx) {
+      console.log("No pending tx for order:", order_id);
+      return res.sendStatus(200);
+    }
+
+    if (payment_status === "finished" || payment_status === "confirmed") {
+      tx.status = "completed";
+      await tx.save();
+
+      // Credit user balance
+      const user = await getOrCreateUser(tx.telegramId);
+      user.dollarBalance += Number(price_amount || tx.amount);
+      await user.save();
+
+      console.log(`✅ Crypto deposit completed: $${tx.amount} for user ${tx.telegramId}`);
+
+      // Notify owner
+      try {
+        await bot.sendMessage(6965488457,
+          `💰 Crypto Deposit!\n\nUser: ${tx.telegramId}\nAmount: $${tx.amount}\nOrder: ${order_id}\nStatus: ${payment_status}`
+        );
+      } catch (e) { /* ignore */ }
+    } else if (payment_status === "failed" || payment_status === "expired") {
+      tx.status = "failed";
+      await tx.save();
+      console.log(`❌ Crypto deposit failed: ${order_id} - ${payment_status}`);
+    }
+    // For other statuses (waiting, confirming, sending) - do nothing, keep pending
+
+    return res.sendStatus(200);
+  } catch (error) {
+    console.error("Crypto IPN error:", error);
+    return res.sendStatus(200); // Always return 200 to NOWPayments
+  }
+});
+
+// GET /api/crypto/currencies - Get available cryptocurrencies
+app.get("/api/crypto/currencies", async (req, res) => {
+  try {
+    if (!NOWPAYMENTS_API_KEY) {
+      // Return popular defaults if API key not set
+      return res.json({ currencies: ["btc", "eth", "usdt", "ltc", "ton", "trx", "sol", "doge"] });
+    }
+    const npRes = await fetch(`${NOWPAYMENTS_API}/currencies`, {
+      headers: { "x-api-key": NOWPAYMENTS_API_KEY },
+    });
+    const data = await npRes.json();
+    return res.json({ currencies: data.currencies || [] });
+  } catch (error) {
+    return res.json({ currencies: ["btc", "eth", "usdt", "ltc", "ton", "trx", "sol", "doge"] });
+  }
+});
+
+// GET /api/crypto/min-amount - Get minimum payment amount
+app.get("/api/crypto/min-amount", async (req, res) => {
+  try {
+    const { currency } = req.query;
+    if (!currency || !NOWPAYMENTS_API_KEY) {
+      return res.json({ min_amount: 1 });
+    }
+    const npRes = await fetch(`${NOWPAYMENTS_API}/min-amount?currency_from=${currency}&currency_to=usd`, {
+      headers: { "x-api-key": NOWPAYMENTS_API_KEY },
+    });
+    const data = await npRes.json();
+    return res.json({ min_amount: data.min_amount || 1 });
+  } catch (error) {
+    return res.json({ min_amount: 1 });
+  }
+});
+
+// POST /api/crypto/check-status - Check payment status
+app.post("/api/crypto/check-status", async (req, res) => {
+  try {
+    const { orderId } = req.body;
+    if (!orderId) return res.status(400).json({ error: "Missing orderId" });
+
+    const tx = await Transaction.findOne({ depositComment: orderId });
+    if (!tx) return res.status(404).json({ error: "Transaction not found" });
+
+    return res.json({ status: tx.status, amount: tx.amount });
+  } catch (error) {
+    return res.status(500).json({ error: "Failed to check status" });
+  }
+});
+
 // SPA fallback - serve index.html for all non-API routes
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "../public/index.html"));
