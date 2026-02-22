@@ -89,6 +89,12 @@ const WalletScreen = () => {
   const [cryptoAmount, setCryptoAmount] = useState("");
   const [cryptoCurrency, setCryptoCurrency] = useState("usdt");
   const [cryptoProcessing, setCryptoProcessing] = useState(false);
+  const [cryptoPayment, setCryptoPayment] = useState<{
+    payAddress: string;
+    payAmount: number;
+    payCurrency: string;
+    orderId: string;
+  } | null>(null);
 
   const { dollarBalance, starBalance, refreshBalance } = useBalanceContext();
 
@@ -266,12 +272,17 @@ const WalletScreen = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to create payment");
 
-      // Open NOWPayments invoice URL
-      if (data.invoiceUrl) {
-        window.open(data.invoiceUrl, "_blank");
+      // Show payment details in-app
+      if (data.payAddress) {
+        setCryptoPayment({
+          payAddress: data.payAddress,
+          payAmount: data.payAmount,
+          payCurrency: data.payCurrency,
+          orderId: data.orderId,
+        });
         toast({
-          title: "Payment Page Opened! 🪙",
-          description: `Send ${cryptoCurrency.toUpperCase()} worth $${usdAmt}. Balance will update automatically after confirmation.`,
+          title: "Payment Created! 🪙",
+          description: `Send exactly ${data.payAmount} ${data.payCurrency.toUpperCase()} to the address shown below.`,
         });
         setCryptoAmount("");
       }
@@ -543,6 +554,47 @@ const WalletScreen = () => {
             {cryptoProcessing ? "..." : <><ExternalLink className="h-4 w-4" /></>}
           </Button>
         </div>
+        {/* Payment details shown in-app */}
+        <AnimatePresence>
+          {cryptoPayment && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="bg-muted/50 border border-primary/30 rounded-xl p-3 space-y-2"
+            >
+              <p className="text-xs font-semibold text-foreground">
+                Send exactly <span className="text-primary">{cryptoPayment.payAmount} {cryptoPayment.payCurrency.toUpperCase()}</span>
+              </p>
+              <div className="bg-background border border-border rounded-lg p-2">
+                <p className="text-[10px] text-muted-foreground mb-1">To this address:</p>
+                <p className="text-xs font-mono text-foreground break-all select-all">{cryptoPayment.payAddress}</p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full rounded-lg text-xs"
+                onClick={() => {
+                  navigator.clipboard.writeText(cryptoPayment.payAddress);
+                  toast({ title: "Copied!", description: "Address copied to clipboard." });
+                }}
+              >
+                📋 Copy Address
+              </Button>
+              <p className="text-[10px] text-muted-foreground">
+                Balance updates automatically after confirmation • Send exact amount only
+              </p>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full text-xs text-muted-foreground"
+                onClick={() => setCryptoPayment(null)}
+              >
+                Close
+              </Button>
+            </motion.div>
+          )}
+        </AnimatePresence>
         <p className="text-[10px] text-muted-foreground">
           Powered by NOWPayments • Balance updates automatically after payment confirmation
         </p>
