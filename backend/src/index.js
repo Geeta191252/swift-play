@@ -221,7 +221,7 @@ app.get("/api/debug", (req, res) => {
 
 // Health check API
 app.get("/api/health", (req, res) => {
-  res.json({ status: "ok", service: "telegram-wallet-backend", version: "2.0" });
+  res.json({ status: "ok", service: "telegram-wallet-backend", version: "3.0-winnings-fix" });
 });
 
 // ============================================
@@ -609,8 +609,17 @@ app.post("/api/winnings", async (req, res) => {
       return res.json({ dollarWinnings: 0, starWinnings: 0 });
     }
 
+    // DEBUG: Log all win/loss transactions for this user
+    const allGameTx = await Transaction.find({ 
+      telegramId: numericId, 
+      type: { $in: ["win", "loss"] }, 
+      status: "completed" 
+    }).lean();
+    console.log(`[WINNINGS DEBUG] User ${numericId} has ${allGameTx.length} win/loss transactions:`, 
+      allGameTx.map(t => ({ type: t.type, currency: t.currency, amount: t.amount }))
+    );
+
     // Calculate NET winnings robustly: sum wins separately, sum losses separately (use abs), then subtract
-    // This handles both old data (losses stored as positive) and new data (losses stored as negative)
     const dollarWins = await Transaction.aggregate([
       { $match: { telegramId: numericId, type: "win", currency: "dollar", status: "completed" } },
       { $group: { _id: null, total: { $sum: "$amount" } } }
@@ -631,6 +640,8 @@ app.post("/api/winnings", async (req, res) => {
 
     const dollarNet = (dollarWins[0]?.total || 0) - (dollarLosses[0]?.total || 0);
     const starNet = (starWins[0]?.total || 0) - (starLosses[0]?.total || 0);
+
+    console.log(`[WINNINGS DEBUG] User ${numericId}: dollarWins=${dollarWins[0]?.total||0}, dollarLosses=${dollarLosses[0]?.total||0}, dollarNet=${dollarNet}, starWins=${starWins[0]?.total||0}, starLosses=${starLosses[0]?.total||0}, starNet=${starNet}`);
 
     return res.json({
       dollarWinnings: Math.max(0, dollarNet),
