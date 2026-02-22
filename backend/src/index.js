@@ -609,43 +609,22 @@ app.post("/api/winnings", async (req, res) => {
       return res.json({ dollarWinnings: 0, starWinnings: 0 });
     }
 
-    // DEBUG: Log all win/loss transactions for this user
-    const allGameTx = await Transaction.find({ 
-      telegramId: numericId, 
-      type: { $in: ["win", "loss"] }, 
-      status: "completed" 
-    }).lean();
-    console.log(`[WINNINGS DEBUG] User ${numericId} has ${allGameTx.length} win/loss transactions:`, 
-      allGameTx.map(t => ({ type: t.type, currency: t.currency, amount: t.amount }))
-    );
-
-    // Calculate NET winnings robustly: sum wins separately, sum losses separately (use abs), then subtract
+    // Winnings = ONLY sum of win transactions (losses are NOT subtracted)
+    // When user wins: winning += winAmount, wallet += winAmount
+    // When user loses: wallet -= betAmount (winning stays same)
     const dollarWins = await Transaction.aggregate([
       { $match: { telegramId: numericId, type: "win", currency: "dollar", status: "completed" } },
       { $group: { _id: null, total: { $sum: "$amount" } } }
-    ]);
-    const dollarLosses = await Transaction.aggregate([
-      { $match: { telegramId: numericId, type: "loss", currency: "dollar", status: "completed" } },
-      { $group: { _id: null, total: { $sum: { $abs: "$amount" } } } }
     ]);
 
     const starWins = await Transaction.aggregate([
       { $match: { telegramId: numericId, type: "win", currency: "star", status: "completed" } },
       { $group: { _id: null, total: { $sum: "$amount" } } }
     ]);
-    const starLosses = await Transaction.aggregate([
-      { $match: { telegramId: numericId, type: "loss", currency: "star", status: "completed" } },
-      { $group: { _id: null, total: { $sum: { $abs: "$amount" } } } }
-    ]);
-
-    const dollarNet = (dollarWins[0]?.total || 0) - (dollarLosses[0]?.total || 0);
-    const starNet = (starWins[0]?.total || 0) - (starLosses[0]?.total || 0);
-
-    console.log(`[WINNINGS DEBUG] User ${numericId}: dollarWins=${dollarWins[0]?.total||0}, dollarLosses=${dollarLosses[0]?.total||0}, dollarNet=${dollarNet}, starWins=${starWins[0]?.total||0}, starLosses=${starLosses[0]?.total||0}, starNet=${starNet}`);
 
     return res.json({
-      dollarWinnings: Math.max(0, dollarNet),
-      starWinnings: Math.max(0, starNet),
+      dollarWinnings: Math.max(0, dollarWins[0]?.total || 0),
+      starWinnings: Math.max(0, starWins[0]?.total || 0),
     });
   } catch (error) {
     console.error("Winnings error:", error);
