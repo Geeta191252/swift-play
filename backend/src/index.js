@@ -630,12 +630,10 @@ const NOWPAYMENTS_API_KEY = process.env.NOWPAYMENTS_API_KEY || "";
 const NOWPAYMENTS_IPN_SECRET = process.env.NOWPAYMENTS_IPN_SECRET || "";
 const NOWPAYMENTS_API = "https://api.nowpayments.io/v1";
 
-// POST /api/crypto/create-payment - Create NOWPayments invoice
+// POST /api/crypto/create-payment - Create NOWPayments direct payment
 app.post("/api/crypto/create-payment", async (req, res) => {
   try {
     const { userId, amount, currency } = req.body;
-    // amount = USD amount user wants to deposit
-    // currency = crypto they want to pay with (btc, eth, ltc, usdt, ton, etc.)
     if (!userId || !amount || !currency) {
       return res.status(400).json({ error: "Missing userId, amount, or currency" });
     }
@@ -645,7 +643,8 @@ app.post("/api/crypto/create-payment", async (req, res) => {
 
     const orderId = `dep_${userId}_${Date.now()}`;
 
-    const npRes = await fetch(`${NOWPAYMENTS_API}/invoice`, {
+    // Use /payment endpoint for direct address (no hosted page)
+    const npRes = await fetch(`${NOWPAYMENTS_API}/payment`, {
       method: "POST",
       headers: {
         "x-api-key": NOWPAYMENTS_API_KEY,
@@ -658,12 +657,11 @@ app.post("/api/crypto/create-payment", async (req, res) => {
         order_id: orderId,
         order_description: `Deposit $${amount} for user ${userId}`,
         ipn_callback_url: `${process.env.KOYEB_URL || "https://broken-bria-chetan1-ea890b93.koyeb.app"}/api/crypto/ipn`,
-        success_url: `${process.env.KOYEB_URL || "https://broken-bria-chetan1-ea890b93.koyeb.app"}`,
-        cancel_url: `${process.env.KOYEB_URL || "https://broken-bria-chetan1-ea890b93.koyeb.app"}`,
       }),
     });
 
     const npData = await npRes.json();
+    console.log("NOWPayments /payment response:", JSON.stringify(npData));
     if (!npRes.ok) {
       console.error("NOWPayments error:", npData);
       throw new Error(npData.message || "Failed to create payment");
@@ -678,13 +676,16 @@ app.post("/api/crypto/create-payment", async (req, res) => {
       status: "pending",
       description: `Crypto Deposit: $${amount} via ${currency.toUpperCase()}`,
       depositComment: orderId,
-      tonTxHash: String(npData.id), // reuse field to store nowpayments invoice id
+      tonTxHash: String(npData.payment_id || npData.id),
     });
 
     return res.json({
-      invoiceUrl: npData.invoice_url,
-      invoiceId: npData.id,
+      payAddress: npData.pay_address,
+      payAmount: npData.pay_amount,
+      payCurrency: npData.pay_currency,
+      paymentId: npData.payment_id,
       orderId,
+      expirationEstimate: npData.expiration_estimate_date,
     });
   } catch (error) {
     console.error("Crypto create-payment error:", error);
