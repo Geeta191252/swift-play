@@ -160,8 +160,11 @@ const WalletScreen = () => {
     refetchInterval: 30000,
   });
 
-  const dollarWinnings = winnings?.dollarWinnings ?? 0;
-  const starWinnings = winnings?.starWinnings ?? 0;
+  const dollarWinningsRaw = winnings?.dollarWinnings ?? 0;
+  const starWinningsRaw = winnings?.starWinnings ?? 0;
+  // Cap winnings at current balance - user can't withdraw more than they have
+  const dollarWinnings = Math.min(dollarWinningsRaw, dollarBalance);
+  const starWinnings = Math.min(starWinningsRaw, starBalance);
 
   // Fetch TON price
   useQuery({
