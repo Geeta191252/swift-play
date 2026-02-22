@@ -234,6 +234,47 @@ app.post("/api/debug-winnings", async (req, res) => {
   res.json({ winCount: winTxns.length, depositCount: depositTxns.length, wins: winTxns, allTypes: allTxns.map(t => ({ type: t.type, currency: t.currency, amount: t.amount })) });
 });
 
+// Debug: GET endpoint to easily check winnings in browser
+app.get("/api/debug-winnings/:userId", async (req, res) => {
+  try {
+    const numericId = Number(req.params.userId);
+    if (!numericId) return res.json({ error: "Invalid userId" });
+    
+    const allTxns = await Transaction.find({ telegramId: numericId, status: "completed" })
+      .select("type currency amount createdAt description")
+      .sort({ createdAt: -1 })
+      .lean();
+    
+    const winTxns = allTxns.filter(t => t.type === "win");
+    const depositTxns = allTxns.filter(t => t.type === "deposit");
+    
+    const starWinTotal = winTxns.filter(t => t.currency === "star").reduce((s, t) => s + t.amount, 0);
+    const dollarWinTotal = winTxns.filter(t => t.currency === "dollar").reduce((s, t) => s + t.amount, 0);
+    const starDepositTotal = depositTxns.filter(t => t.currency === "star").reduce((s, t) => s + t.amount, 0);
+    
+    res.json({
+      userId: numericId,
+      summary: {
+        starWinnings: starWinTotal,
+        dollarWinnings: dollarWinTotal,
+        starDeposits: starDepositTotal,
+        totalTransactions: allTxns.length,
+        winCount: winTxns.length,
+        depositCount: depositTxns.length,
+      },
+      allTransactions: allTxns.map(t => ({
+        type: t.type,
+        currency: t.currency,
+        amount: t.amount,
+        date: t.createdAt,
+        description: t.description,
+      })),
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 
 // GET /api/admin/stats - Owner stats (Stars earned, all transactions)
 // Only accessible with owner telegram ID
