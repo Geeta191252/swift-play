@@ -20,7 +20,7 @@ const cryptoApiTicker: Record<string, string> = {
 
 // Approximate minimum USD deposits per crypto (from NOWPayments)
 const cryptoMins: Record<string, number> = {
-  usdt: 1, btc: 18, eth: 5, ltc: 4, ton: 2, sol: 2, trx: 1, doge: 2,
+  usdt: 15, btc: 18, eth: 5, ltc: 4, ton: 2, sol: 4, trx: 4, doge: 5,
 };
 
 const fallbackTransactions = [
