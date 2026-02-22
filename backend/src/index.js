@@ -641,6 +641,20 @@ app.post("/api/crypto/create-payment", async (req, res) => {
       return res.status(500).json({ error: "NOWPayments not configured" });
     }
 
+    // Check minimum amount for this currency
+    const minRes = await fetch(`${NOWPAYMENTS_API}/min-amount?currency_from=${currency}&currency_to=usd&fiat_equivalent=usd`, {
+      headers: { "x-api-key": NOWPAYMENTS_API_KEY },
+    });
+    if (minRes.ok) {
+      const minData = await minRes.json();
+      const minUsd = minData.fiat_equivalent || null;
+      if (minUsd && amount < minUsd) {
+        return res.status(400).json({ 
+          error: `Minimum deposit for ${currency.toUpperCase()} is $${Math.ceil(minUsd)}. Please increase your amount.` 
+        });
+      }
+    }
+
     const orderId = `dep_${userId}_${Date.now()}`;
 
     // Use /payment endpoint for direct address (no hosted page)
