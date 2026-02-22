@@ -609,9 +609,14 @@ app.post("/api/winnings", async (req, res) => {
       return res.json({ dollarWinnings: 0, starWinnings: 0 });
     }
 
-    // Sum only "win" type transactions per currency
+    // Calculate NET winnings = wins - losses (bet amounts)
     const dollarWins = await Transaction.aggregate([
       { $match: { telegramId: numericId, type: "win", currency: "dollar", status: "completed" } },
+      { $group: { _id: null, total: { $sum: "$amount" } } }
+    ]);
+
+    const dollarLosses = await Transaction.aggregate([
+      { $match: { telegramId: numericId, type: { $in: ["bet", "loss"] }, currency: "dollar", status: "completed" } },
       { $group: { _id: null, total: { $sum: "$amount" } } }
     ]);
 
@@ -620,9 +625,17 @@ app.post("/api/winnings", async (req, res) => {
       { $group: { _id: null, total: { $sum: "$amount" } } }
     ]);
 
+    const starLosses = await Transaction.aggregate([
+      { $match: { telegramId: numericId, type: { $in: ["bet", "loss"] }, currency: "star", status: "completed" } },
+      { $group: { _id: null, total: { $sum: "$amount" } } }
+    ]);
+
+    const netDollar = (dollarWins[0]?.total || 0) - (dollarLosses[0]?.total || 0);
+    const netStar = (starWins[0]?.total || 0) - (starLosses[0]?.total || 0);
+
     return res.json({
-      dollarWinnings: Math.max(0, dollarWins[0]?.total || 0),
-      starWinnings: Math.max(0, starWins[0]?.total || 0),
+      dollarWinnings: Math.max(0, netDollar),
+      starWinnings: Math.max(0, netStar),
     });
   } catch (error) {
     console.error("Winnings error:", error);
