@@ -720,10 +720,18 @@ app.post("/api/crypto/ipn", async (req, res) => {
     const data = req.body;
     console.log("📩 NOWPayments IPN:", JSON.stringify(data));
 
-    // Verify IPN signature using raw body to prevent JSON parsing modifications
+    // Verify IPN signature - NOWPayments sends signature in x-nowpayments-sig header
     if (NOWPAYMENTS_IPN_SECRET) {
       const crypto = require("crypto");
-      // Parse from raw body to preserve exact number formatting from NOWPayments
+      const receivedSig = req.headers["x-nowpayments-sig"];
+      console.log("🔑 Received signature header:", receivedSig ? receivedSig.substring(0, 20) + "..." : "MISSING");
+      
+      if (!receivedSig) {
+        console.error("❌ No x-nowpayments-sig header found");
+        return res.status(400).json({ error: "Missing signature header" });
+      }
+      
+      // Use raw body to preserve exact number formatting
       const rawBody = req.rawBody;
       let rawData;
       try {
@@ -734,13 +742,13 @@ app.post("/api/crypto/ipn", async (req, res) => {
       const sortedKeys = Object.keys(rawData).sort();
       const sortedData = {};
       for (const k of sortedKeys) {
-        if (k !== "signature") sortedData[k] = rawData[k];
+        sortedData[k] = rawData[k];
       }
       const hmac = crypto.createHmac("sha512", NOWPAYMENTS_IPN_SECRET)
         .update(JSON.stringify(sortedData))
         .digest("hex");
-      console.log("🔑 IPN signature check - received:", data.signature, "computed:", hmac);
-      if (hmac !== data.signature) {
+      console.log("🔑 IPN signature check - received:", receivedSig.substring(0, 20) + "...", "computed:", hmac.substring(0, 20) + "...");
+      if (hmac !== receivedSig) {
         console.error("❌ IPN signature mismatch");
         console.error("Raw body:", rawBody);
         return res.status(400).json({ error: "Invalid signature" });
