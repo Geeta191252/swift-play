@@ -609,20 +609,32 @@ app.post("/api/winnings", async (req, res) => {
       return res.json({ dollarWinnings: 0, starWinnings: 0 });
     }
 
-    // Calculate NET winnings = sum of all win + loss transactions (wins are positive, losses are negative)
-    const dollarNet = await Transaction.aggregate([
-      { $match: { telegramId: numericId, type: { $in: ["win", "loss"] }, currency: "dollar", status: "completed" } },
+    // Calculate NET winnings robustly: sum wins separately, sum losses separately (use abs), then subtract
+    // This handles both old data (losses stored as positive) and new data (losses stored as negative)
+    const dollarWins = await Transaction.aggregate([
+      { $match: { telegramId: numericId, type: "win", currency: "dollar", status: "completed" } },
       { $group: { _id: null, total: { $sum: "$amount" } } }
+    ]);
+    const dollarLosses = await Transaction.aggregate([
+      { $match: { telegramId: numericId, type: "loss", currency: "dollar", status: "completed" } },
+      { $group: { _id: null, total: { $sum: { $abs: "$amount" } } } }
     ]);
 
-    const starNet = await Transaction.aggregate([
-      { $match: { telegramId: numericId, type: { $in: ["win", "loss"] }, currency: "star", status: "completed" } },
+    const starWins = await Transaction.aggregate([
+      { $match: { telegramId: numericId, type: "win", currency: "star", status: "completed" } },
       { $group: { _id: null, total: { $sum: "$amount" } } }
     ]);
+    const starLosses = await Transaction.aggregate([
+      { $match: { telegramId: numericId, type: "loss", currency: "star", status: "completed" } },
+      { $group: { _id: null, total: { $sum: { $abs: "$amount" } } } }
+    ]);
+
+    const dollarNet = (dollarWins[0]?.total || 0) - (dollarLosses[0]?.total || 0);
+    const starNet = (starWins[0]?.total || 0) - (starLosses[0]?.total || 0);
 
     return res.json({
-      dollarWinnings: Math.max(0, dollarNet[0]?.total || 0),
-      starWinnings: Math.max(0, starNet[0]?.total || 0),
+      dollarWinnings: Math.max(0, dollarNet),
+      starWinnings: Math.max(0, starNet),
     });
   } catch (error) {
     console.error("Winnings error:", error);
