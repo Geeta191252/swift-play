@@ -609,33 +609,20 @@ app.post("/api/winnings", async (req, res) => {
       return res.json({ dollarWinnings: 0, starWinnings: 0 });
     }
 
-    // Calculate NET winnings = wins - losses (bet amounts)
-    const dollarWins = await Transaction.aggregate([
-      { $match: { telegramId: numericId, type: "win", currency: "dollar", status: "completed" } },
+    // Calculate NET winnings = sum of all win + loss transactions (wins are positive, losses are negative)
+    const dollarNet = await Transaction.aggregate([
+      { $match: { telegramId: numericId, type: { $in: ["win", "loss"] }, currency: "dollar", status: "completed" } },
       { $group: { _id: null, total: { $sum: "$amount" } } }
     ]);
 
-    const dollarLosses = await Transaction.aggregate([
-      { $match: { telegramId: numericId, type: { $in: ["bet", "loss"] }, currency: "dollar", status: "completed" } },
+    const starNet = await Transaction.aggregate([
+      { $match: { telegramId: numericId, type: { $in: ["win", "loss"] }, currency: "star", status: "completed" } },
       { $group: { _id: null, total: { $sum: "$amount" } } }
     ]);
-
-    const starWins = await Transaction.aggregate([
-      { $match: { telegramId: numericId, type: "win", currency: "star", status: "completed" } },
-      { $group: { _id: null, total: { $sum: "$amount" } } }
-    ]);
-
-    const starLosses = await Transaction.aggregate([
-      { $match: { telegramId: numericId, type: { $in: ["bet", "loss"] }, currency: "star", status: "completed" } },
-      { $group: { _id: null, total: { $sum: "$amount" } } }
-    ]);
-
-    const netDollar = (dollarWins[0]?.total || 0) - (dollarLosses[0]?.total || 0);
-    const netStar = (starWins[0]?.total || 0) - (starLosses[0]?.total || 0);
 
     return res.json({
-      dollarWinnings: Math.max(0, netDollar),
-      starWinnings: Math.max(0, netStar),
+      dollarWinnings: Math.max(0, dollarNet[0]?.total || 0),
+      starWinnings: Math.max(0, starNet[0]?.total || 0),
     });
   } catch (error) {
     console.error("Winnings error:", error);
