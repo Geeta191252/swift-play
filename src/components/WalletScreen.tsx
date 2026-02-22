@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { QRCodeSVG } from "qrcode.react";
 import { ArrowDownLeft, ArrowUpRight, DollarSign, Star, ArrowRightLeft, Wallet, Unplug, Coins, ExternalLink } from "lucide-react";
@@ -108,8 +108,41 @@ const WalletScreen = () => {
   } | null>(null);
 
   const { dollarBalance, starBalance, refreshBalance } = useBalanceContext();
+  const [paymentStatus, setPaymentStatus] = useState<string | null>(null);
 
   const apiBase = import.meta.env.VITE_API_BASE_URL || "https://broken-bria-chetan1-ea890b93.koyeb.app/api";
+
+  // Auto-poll payment status when cryptoPayment is active
+  useEffect(() => {
+    if (!cryptoPayment?.orderId) {
+      setPaymentStatus(null);
+      return;
+    }
+
+    const poll = async () => {
+      try {
+        const res = await fetch(`${apiBase}/crypto/check-status`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ orderId: cryptoPayment.orderId }),
+        });
+        const data = await res.json();
+        setPaymentStatus(data.status);
+        if (data.status === "completed") {
+          toast({
+            title: "Payment Received! ✅",
+            description: `$${data.amount} has been added to your wallet.`,
+          });
+          refreshBalance();
+          setCryptoPayment(null);
+        }
+      } catch { /* ignore */ }
+    };
+
+    poll(); // immediate check
+    const interval = setInterval(poll, 10000); // every 10s
+    return () => clearInterval(interval);
+  }, [cryptoPayment?.orderId]);
 
   const { data: transactions = fallbackTransactions } = useQuery({
     queryKey: ["transactions"],
@@ -610,6 +643,14 @@ const WalletScreen = () => {
               <p className="text-[10px] text-muted-foreground">
                 Balance updates automatically after confirmation • Send exact amount only
               </p>
+              {paymentStatus && paymentStatus !== "completed" && (
+                <div className="flex items-center gap-2 bg-primary/10 rounded-lg px-3 py-2">
+                  <span className="animate-pulse text-primary text-lg">⏳</span>
+                  <span className="text-xs font-medium text-foreground capitalize">
+                    Status: {paymentStatus === "pending" ? "Waiting for payment..." : paymentStatus}
+                  </span>
+                </div>
+              )}
               <Button
                 variant="ghost"
                 size="sm"

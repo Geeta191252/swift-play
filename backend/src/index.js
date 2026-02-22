@@ -753,6 +753,20 @@ app.post("/api/crypto/ipn", async (req, res) => {
 
       console.log(`✅ Crypto deposit completed: $${tx.amount} for user ${tx.telegramId}`);
 
+      // Notify user via Telegram bot
+      try {
+        await bot.sendMessage(tx.telegramId,
+          `✅ Payment Received!\n\n💰 $${tx.amount} has been added to your wallet.\n\nOpen the game to start playing! 🎮`,
+          {
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: "🎮 Open Game", web_app: { url: process.env.WEBAPP_URL || process.env.KOYEB_URL || "https://broken-bria-chetan1-ea890b93.koyeb.app" } }],
+              ],
+            },
+          }
+        );
+      } catch (e) { console.error("Failed to notify user:", e.message); }
+
       // Notify owner
       try {
         await bot.sendMessage(6965488457,
