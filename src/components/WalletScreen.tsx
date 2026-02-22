@@ -534,13 +534,14 @@ const WalletScreen = () => {
             <button
               key={coin}
               onClick={() => setCryptoCurrency(coin)}
-              className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${
+              className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors flex flex-col items-center ${
                 cryptoCurrency === coin
                   ? "bg-primary text-primary-foreground"
                   : "bg-muted text-muted-foreground hover:bg-muted/80"
               }`}
             >
-              {coin.toUpperCase()}
+              <span>{coin.toUpperCase()}</span>
+              <span className="text-[9px] font-normal opacity-75">min ${cryptoMins[coin] || 1}</span>
             </button>
           ))}
         </div>
@@ -579,7 +580,9 @@ const WalletScreen = () => {
                 Send exactly <span className="text-primary">{cryptoPayment.payAmount} {cryptoPayment.payCurrency.toUpperCase()}</span>
               </p>
               <div className="bg-background border border-border rounded-lg p-2">
-                <p className="text-[10px] text-muted-foreground mb-1">To this address:</p>
+                <p className="text-[10px] font-semibold text-primary mb-1">
+                  {cryptoPayment.payCurrency.toUpperCase()} Address:
+                </p>
                 <p className="text-xs font-mono text-foreground break-all select-all">{cryptoPayment.payAddress}</p>
               </div>
               <Button
