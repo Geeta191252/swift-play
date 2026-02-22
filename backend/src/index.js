@@ -14,7 +14,14 @@ const PORT = process.env.PORT || 8000;
 
 // Middleware
 app.use(cors());
-app.use(express.json());
+// Capture raw body for IPN signature verification
+app.use(express.json({
+  verify: (req, res, buf) => {
+    if (req.url === '/api/crypto/ipn') {
+      req.rawBody = buf.toString('utf8');
+    }
+  }
+}));
 
 // MongoDB connection
 mongoose
@@ -713,20 +720,32 @@ app.post("/api/crypto/ipn", async (req, res) => {
     const data = req.body;
     console.log("📩 NOWPayments IPN:", JSON.stringify(data));
 
-    // Verify IPN signature if secret is set
+    // Verify IPN signature using raw body to prevent JSON parsing modifications
     if (NOWPAYMENTS_IPN_SECRET) {
       const crypto = require("crypto");
-      const sortedData = Object.keys(data).sort().reduce((r, k) => {
-        if (k !== "signature") r[k] = data[k];
-        return r;
-      }, {});
+      // Parse from raw body to preserve exact number formatting from NOWPayments
+      const rawBody = req.rawBody;
+      let rawData;
+      try {
+        rawData = JSON.parse(rawBody);
+      } catch (e) {
+        rawData = data;
+      }
+      const sortedKeys = Object.keys(rawData).sort();
+      const sortedData = {};
+      for (const k of sortedKeys) {
+        if (k !== "signature") sortedData[k] = rawData[k];
+      }
       const hmac = crypto.createHmac("sha512", NOWPAYMENTS_IPN_SECRET)
         .update(JSON.stringify(sortedData))
         .digest("hex");
+      console.log("🔑 IPN signature check - received:", data.signature, "computed:", hmac);
       if (hmac !== data.signature) {
         console.error("❌ IPN signature mismatch");
+        console.error("Raw body:", rawBody);
         return res.status(400).json({ error: "Invalid signature" });
       }
+      console.log("✅ IPN signature verified");
     }
 
     const { order_id, payment_status, price_amount } = data;
