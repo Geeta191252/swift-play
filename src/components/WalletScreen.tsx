@@ -436,10 +436,24 @@ const WalletScreen = () => {
           transition={{ delay: 0.05 }}
           className="bg-card border border-border rounded-2xl p-4 space-y-1"
         >
-          <div className="flex items-center gap-1.5 text-muted-foreground text-xs font-medium">
-            <Star className="h-3.5 w-3.5" /> Stars
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="flex items-center gap-1.5 text-muted-foreground text-xs font-medium">
+                <Star className="h-3.5 w-3.5" /> Stars
+              </div>
+              <p className="font-bold text-2xl text-foreground">{starBalance.toLocaleString()}</p>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-xs border-primary/50 text-primary hover:bg-primary/10"
+              onClick={() => {
+                setAmountDialog({ open: true, action: "deposit", currency: "star" });
+              }}
+            >
+              + Add Fund
+            </Button>
           </div>
-          <p className="font-bold text-2xl text-foreground">{starBalance.toLocaleString()}</p>
         </motion.div>
       </div>
 
