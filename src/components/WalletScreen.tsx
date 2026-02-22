@@ -63,8 +63,6 @@ const CurrencyMenu = ({ show, onSelect, onClose }: CurrencyMenuProps) => (
 );
 
 const WalletScreen = () => {
-  const [depositMenu, setDepositMenu] = useState(false);
-  const [withdrawMenu, setWithdrawMenu] = useState(false);
   const [loading, setLoading] = useState(false);
   const [amountDialog, setAmountDialog] = useState<{
     open: boolean;
@@ -285,8 +283,6 @@ const WalletScreen = () => {
   };
 
   const handleCurrencySelect = (action: ActionType, currency: CurrencyType) => {
-    if (action === "deposit") setDepositMenu(false);
-    else setWithdrawMenu(false);
     setAmountDialog({ open: true, action, currency });
   };
 
@@ -500,6 +496,7 @@ const WalletScreen = () => {
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.12 }}
+        id="crypto-deposit"
         className="bg-card border border-border rounded-2xl p-4 space-y-3"
       >
         <div className="flex items-center gap-2">
@@ -586,25 +583,23 @@ const WalletScreen = () => {
 
       {/* Deposit & Withdraw */}
       <div className="grid grid-cols-2 gap-3">
-        <div className="relative">
-          <Button
-            variant="outline"
-            className="rounded-xl h-12 w-full"
-            onClick={() => { setDepositMenu(!depositMenu); setWithdrawMenu(false); }}
-          >
-            <ArrowDownLeft className="h-4 w-4 mr-2" /> Deposit
-          </Button>
-          <CurrencyMenu show={depositMenu} onSelect={handleDeposit} onClose={() => setDepositMenu(false)} />
-        </div>
-        <div className="relative">
-          <Button
-            variant="outline"
-            className="rounded-xl h-12 w-full"
-            onClick={() => handleCurrencySelect("withdraw", "dollar")}
-          >
-            <ArrowUpRight className="h-4 w-4 mr-2" /> Withdraw
-          </Button>
-        </div>
+        <Button
+          variant="outline"
+          className="rounded-xl h-12 w-full"
+          onClick={() => {
+            const el = document.getElementById("crypto-deposit");
+            el?.scrollIntoView({ behavior: "smooth" });
+          }}
+        >
+          <ArrowDownLeft className="h-4 w-4 mr-2" /> Deposit
+        </Button>
+        <Button
+          variant="outline"
+          className="rounded-xl h-12 w-full"
+          onClick={() => handleCurrencySelect("withdraw", "dollar")}
+        >
+          <ArrowUpRight className="h-4 w-4 mr-2" /> Withdraw
+        </Button>
       </div>
 
       {/* Star to Dollar Converter */}
