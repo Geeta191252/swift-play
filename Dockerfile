@@ -1,7 +1,7 @@
 FROM node:18-alpine
 
 # Cache bust v3 - force fresh build
-ARG CACHEBUST=3
+ARG CACHEBUST=5
 
 # Build frontend
 WORKDIR /frontend
