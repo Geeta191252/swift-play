@@ -221,10 +221,20 @@ app.get("/api/debug", (req, res) => {
 
 // Health check API
 app.get("/api/health", (req, res) => {
-  res.json({ status: "ok", service: "telegram-wallet-backend", version: "3.0-winnings-fix" });
+  res.json({ status: "ok", service: "telegram-wallet-backend", version: "4.0-winnings-only-wins" });
 });
 
-// ============================================
+// Debug: check win transactions for a user
+app.post("/api/debug-winnings", async (req, res) => {
+  const { userId } = req.body;
+  const numericId = Number(userId);
+  const winTxns = await Transaction.find({ telegramId: numericId, type: "win", status: "completed" }).lean();
+  const depositTxns = await Transaction.find({ telegramId: numericId, type: "deposit", status: "completed" }).lean();
+  const allTxns = await Transaction.find({ telegramId: numericId, status: "completed" }).select("type currency amount").lean();
+  res.json({ winCount: winTxns.length, depositCount: depositTxns.length, wins: winTxns, allTypes: allTxns.map(t => ({ type: t.type, currency: t.currency, amount: t.amount })) });
+});
+
+
 // GET /api/admin/stats - Owner stats (Stars earned, all transactions)
 // Only accessible with owner telegram ID
 // ============================================
