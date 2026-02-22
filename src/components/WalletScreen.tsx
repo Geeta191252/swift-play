@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowDownLeft, ArrowUpRight, DollarSign, Star, ArrowRightLeft, Wallet, Unplug } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, DollarSign, Star, ArrowRightLeft, Wallet, Unplug, Coins, ExternalLink } from "lucide-react";
 import { useTonConnectUI, useTonWallet, useTonAddress } from "@tonconnect/ui-react";
 // @ton/core is dynamically imported where needed to avoid Buffer polyfill issues
 import { Button } from "./ui/button";
@@ -86,6 +86,11 @@ const WalletScreen = () => {
   const [tonWithdrawAmount, setTonWithdrawAmount] = useState("");
   const [tonProcessing, setTonProcessing] = useState(false);
   const [tonPrice, setTonPrice] = useState<number | null>(null);
+
+  // Crypto (NOWPayments) state
+  const [cryptoAmount, setCryptoAmount] = useState("");
+  const [cryptoCurrency, setCryptoCurrency] = useState("usdt");
+  const [cryptoProcessing, setCryptoProcessing] = useState(false);
 
   const { dollarBalance, starBalance, refreshBalance } = useBalanceContext();
 
@@ -239,6 +244,43 @@ const WalletScreen = () => {
       toast({ title: "Error", description: err?.message || "Withdrawal failed.", variant: "destructive" });
     } finally {
       setTonProcessing(false);
+    }
+  };
+
+  // ---- Crypto (NOWPayments) Deposit Handler ----
+  const handleCryptoDeposit = async () => {
+    const usdAmt = Number(cryptoAmount);
+    if (!usdAmt || usdAmt < 1) {
+      toast({ title: "Invalid amount", description: "Minimum $1 deposit.", variant: "destructive" });
+      return;
+    }
+
+    setCryptoProcessing(true);
+    try {
+      const tg = getTelegram();
+      const userId = tg?.initDataUnsafe?.user?.id || "demo";
+
+      const res = await fetch(`${apiBase}/crypto/create-payment`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, amount: usdAmt, currency: cryptoCurrency }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to create payment");
+
+      // Open NOWPayments invoice URL
+      if (data.invoiceUrl) {
+        window.open(data.invoiceUrl, "_blank");
+        toast({
+          title: "Payment Page Opened! 🪙",
+          description: `Send ${cryptoCurrency.toUpperCase()} worth $${usdAmt}. Balance will update automatically after confirmation.`,
+        });
+        setCryptoAmount("");
+      }
+    } catch (err: any) {
+      toast({ title: "Error", description: err?.message || "Crypto deposit failed.", variant: "destructive" });
+    } finally {
+      setCryptoProcessing(false);
     }
   };
 
@@ -451,6 +493,62 @@ const WalletScreen = () => {
             <Wallet className="h-4 w-4 mr-2" /> Connect TON Wallet
           </Button>
         )}
+      </motion.div>
+
+      {/* Crypto Deposit (NOWPayments) */}
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.12 }}
+        className="bg-card border border-border rounded-2xl p-4 space-y-3"
+      >
+        <div className="flex items-center gap-2">
+          <Coins className="h-4 w-4 text-primary" />
+          <h3 className="font-semibold text-sm text-foreground">Crypto Deposit</h3>
+        </div>
+        <p className="text-xs text-muted-foreground">Pay with any crypto → Get $ in wallet</p>
+
+        {/* Crypto selector */}
+        <div className="flex flex-wrap gap-1.5">
+          {["usdt", "btc", "eth", "ltc", "ton", "sol", "trx", "doge"].map((coin) => (
+            <button
+              key={coin}
+              onClick={() => setCryptoCurrency(coin)}
+              className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${
+                cryptoCurrency === coin
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+              }`}
+            >
+              {coin.toUpperCase()}
+            </button>
+          ))}
+        </div>
+
+        {/* Amount input */}
+        <div className="flex gap-2">
+          <div className="flex-1 relative">
+            <Input
+              type="number"
+              placeholder="USD amount (min $1)"
+              value={cryptoAmount}
+              onChange={(e) => setCryptoAmount(e.target.value)}
+              className="pr-8 rounded-xl bg-background"
+              min={1}
+            />
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">$</span>
+          </div>
+          <Button
+            className="rounded-xl"
+            disabled={cryptoProcessing || !cryptoAmount}
+            onClick={handleCryptoDeposit}
+          >
+            {cryptoProcessing ? "..." : <><ExternalLink className="h-4 w-4" /></>}
+          </Button>
+        </div>
+        <p className="text-[10px] text-muted-foreground">
+          Powered by NOWPayments • Balance updates automatically after payment confirmation
+        </p>
       </motion.div>
 
       {/* Winning Actions */}
