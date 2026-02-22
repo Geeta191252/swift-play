@@ -13,6 +13,11 @@ import AmountInputDialog from "./AmountInputDialog";
 
 const STAR_TO_DOLLAR_RATE = 100; // 100 ⭐ = $1
 
+// NOWPayments requires network-specific tickers for some coins
+const cryptoApiTicker: Record<string, string> = {
+  usdt: "usdttrc20", // USDT on TRC20 network
+};
+
 // Approximate minimum USD deposits per crypto (from NOWPayments)
 const cryptoMins: Record<string, number> = {
   usdt: 1, btc: 18, eth: 5, ltc: 1, ton: 1, sol: 1, trx: 1, doge: 1,
@@ -270,10 +275,11 @@ const WalletScreen = () => {
       const tg = getTelegram();
       const userId = tg?.initDataUnsafe?.user?.id || "demo";
 
+      const apiCurrency = cryptoApiTicker[cryptoCurrency] || cryptoCurrency;
       const res = await fetch(`${apiBase}/crypto/create-payment`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, amount: usdAmt, currency: cryptoCurrency }),
+        body: JSON.stringify({ userId, amount: usdAmt, currency: apiCurrency }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to create payment");
