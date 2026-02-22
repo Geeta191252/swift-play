@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { QRCodeSVG } from "qrcode.react";
 import { ArrowDownLeft, ArrowUpRight, DollarSign, Star, ArrowRightLeft, Wallet, Unplug, Coins, ExternalLink } from "lucide-react";
 import { useTonConnectUI, useTonWallet, useTonAddress } from "@tonconnect/ui-react";
 // @ton/core is dynamically imported where needed to avoid Buffer polyfill issues
@@ -578,6 +579,17 @@ const WalletScreen = () => {
               <p className="text-xs font-semibold text-foreground">
                 Send exactly <span className="text-primary">{cryptoPayment.payAmount} {cryptoPayment.payCurrency.toUpperCase()}</span>
               </p>
+              {/* QR Code */}
+              <div className="flex justify-center py-2">
+                <div className="bg-white p-3 rounded-xl">
+                  <QRCodeSVG
+                    value={cryptoPayment.payAddress}
+                    size={180}
+                    level="H"
+                    includeMargin={false}
+                  />
+                </div>
+              </div>
               <div className="bg-background border border-border rounded-lg p-2">
                 <p className="text-[10px] font-semibold text-primary mb-1">
                   {cryptoPayment.payCurrency.toUpperCase()} Address:
