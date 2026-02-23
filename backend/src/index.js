@@ -660,9 +660,8 @@ app.post("/api/winnings", async (req, res) => {
       return res.json({ dollarWinnings: 0, starWinnings: 0 });
     }
 
-    // Winnings = ONLY sum of win transactions (losses are NOT subtracted)
-    // When user wins: winning += winAmount, wallet += winAmount
-    // When user loses: wallet -= betAmount (winning stays same)
+    // Winnings = ONLY sum of win transactions
+    // Deposits = sum of deposit transactions (to subtract from withdrawable)
     const dollarWins = await Transaction.aggregate([
       { $match: { telegramId: numericId, type: "win", currency: "dollar", status: "completed" } },
       { $group: { _id: null, total: { $sum: "$amount" } } }
@@ -673,9 +672,21 @@ app.post("/api/winnings", async (req, res) => {
       { $group: { _id: null, total: { $sum: "$amount" } } }
     ]);
 
+    const dollarDeposits = await Transaction.aggregate([
+      { $match: { telegramId: numericId, type: "deposit", currency: "dollar", status: "completed" } },
+      { $group: { _id: null, total: { $sum: "$amount" } } }
+    ]);
+
+    const starDeposits = await Transaction.aggregate([
+      { $match: { telegramId: numericId, type: "deposit", currency: "star", status: "completed" } },
+      { $group: { _id: null, total: { $sum: "$amount" } } }
+    ]);
+
     return res.json({
       dollarWinnings: Math.max(0, dollarWins[0]?.total || 0),
       starWinnings: Math.max(0, starWins[0]?.total || 0),
+      dollarDeposits: Math.max(0, dollarDeposits[0]?.total || 0),
+      starDeposits: Math.max(0, starDeposits[0]?.total || 0),
     });
   } catch (error) {
     console.error("Winnings error:", error);
