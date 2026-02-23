@@ -389,14 +389,28 @@ app.post("/api/game/result", async (req, res) => {
     if (user[balanceField] < 0) user[balanceField] = 0;
     await user.save();
 
-    await Transaction.create({
-      telegramId: userId,
-      type: netAmount >= 0 ? "win" : "loss",
-      currency,
-      amount: netAmount,
-      status: "completed",
-      description: `${game}: Bet ${betAmount}, Won ${winAmount}`,
-    });
+    if (winAmount > 0) {
+      // Won: store gross winAmount (not net) so winning display shows total won
+      await Transaction.create({
+        telegramId: userId,
+        type: "win",
+        currency,
+        amount: winAmount,
+        status: "completed",
+        description: `${game}: Bet ${betAmount}, Won ${winAmount}`,
+      });
+    }
+    if (betAmount > 0) {
+      // Bet: always record the bet amount as a separate transaction
+      await Transaction.create({
+        telegramId: userId,
+        type: "bet",
+        currency,
+        amount: -betAmount,
+        status: "completed",
+        description: `${game}: Bet ${betAmount}`,
+      });
+    }
 
     return res.json({
       dollarBalance: user.dollarBalance,
