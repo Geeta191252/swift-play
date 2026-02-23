@@ -1,7 +1,7 @@
 FROM node:18-alpine
 
-# Cache bust v3 - force fresh build
-ARG CACHEBUST=5
+# Cache bust v6 - fix winning excluding deposits
+ARG CACHEBUST=6
 
 # Build frontend
 WORKDIR /frontend

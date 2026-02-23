@@ -155,16 +155,18 @@ const WalletScreen = () => {
   const { data: winnings } = useQuery({
     queryKey: ["winnings"],
     queryFn: fetchWinnings,
-    placeholderData: { dollarWinnings: 0, starWinnings: 0 },
+    placeholderData: { dollarWinnings: 0, starWinnings: 0, dollarDeposits: 0, starDeposits: 0 },
     retry: 1,
     refetchInterval: 30000,
   });
 
   const dollarWinningsRaw = winnings?.dollarWinnings ?? 0;
   const starWinningsRaw = winnings?.starWinnings ?? 0;
-  // Cap winnings at current balance - user can't withdraw more than they have
-  const dollarWinnings = Math.min(dollarWinningsRaw, dollarBalance);
-  const starWinnings = Math.min(starWinningsRaw, starBalance);
+  const dollarDepositsTotal = winnings?.dollarDeposits ?? 0;
+  const starDepositsTotal = winnings?.starDeposits ?? 0;
+  // Withdrawable winnings = min(winnings, balance - deposits) — deposits are excluded
+  const dollarWinnings = Math.max(0, Math.min(dollarWinningsRaw, dollarBalance - dollarDepositsTotal));
+  const starWinnings = Math.max(0, Math.min(starWinningsRaw, starBalance - starDepositsTotal));
 
   // Fetch TON price
   useQuery({

@@ -173,7 +173,7 @@ export const fetchTransactions = async (): Promise<Array<{
 /**
  * Fetch user winnings (only from game wins)
  */
-export const fetchWinnings = async (): Promise<{ dollarWinnings: number; starWinnings: number }> => {
+export const fetchWinnings = async (): Promise<{ dollarWinnings: number; starWinnings: number; dollarDeposits: number; starDeposits: number }> => {
   const tg = getTelegram();
   const userId = tg?.initDataUnsafe?.user?.id;
 
