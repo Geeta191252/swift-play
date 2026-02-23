@@ -221,7 +221,33 @@ app.get("/api/debug", (req, res) => {
 
 // Health check API
 app.get("/api/health", (req, res) => {
-  res.json({ status: "ok", service: "telegram-wallet-backend", version: "4.0-winnings-only-wins" });
+  res.json({ status: "ok", service: "telegram-wallet-backend", version: "5.0-clean-wins" });
+});
+
+// ============================================
+// POST /api/admin/cleanup-wins - Remove all old win transactions
+// so winnings start fresh from 0. Only owner can call this.
+// ============================================
+app.post("/api/admin/cleanup-wins", async (req, res) => {
+  try {
+    const { ownerId, userId } = req.body;
+    if (String(ownerId) !== "6965488457") {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
+
+    const filter = { type: "win", status: "completed" };
+    if (userId) filter.telegramId = Number(userId);
+
+    const result = await Transaction.deleteMany(filter);
+    return res.json({
+      success: true,
+      deletedCount: result.deletedCount,
+      message: `Deleted ${result.deletedCount} win transactions${userId ? ` for user ${userId}` : ' for all users'}. Winnings reset to 0.`,
+    });
+  } catch (error) {
+    console.error("Cleanup error:", error);
+    return res.status(500).json({ error: "Cleanup failed" });
+  }
 });
 
 // Debug: check win transactions for a user
