@@ -160,13 +160,9 @@ const WalletScreen = () => {
     refetchInterval: 30000,
   });
 
-  const dollarWinningsRaw = winnings?.dollarWinnings ?? 0;
-  const starWinningsRaw = winnings?.starWinnings ?? 0;
-  const dollarDepositsTotal = winnings?.dollarDeposits ?? 0;
-  const starDepositsTotal = winnings?.starDeposits ?? 0;
-  // Withdrawable winnings = min(winnings, balance - deposits) — deposits are excluded
-  const dollarWinnings = Math.max(0, Math.min(dollarWinningsRaw, dollarBalance - dollarDepositsTotal));
-  const starWinnings = Math.max(0, Math.min(starWinningsRaw, starBalance - starDepositsTotal));
+  // Winning = sirf total game winnings (gross) — tracking ke liye
+  const dollarWinnings = winnings?.dollarWinnings ?? 0;
+  const starWinnings = winnings?.starWinnings ?? 0;
 
   // Fetch TON price
   useQuery({
