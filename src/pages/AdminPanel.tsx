@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Users, Star, DollarSign, RefreshCw, User, CreditCard } from "lucide-react";
+import { ArrowLeft, Users, Star, DollarSign, RefreshCw, User, CreditCard, Plus, Minus, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { getTelegramUser } from "@/lib/telegram";
 
@@ -53,6 +53,14 @@ const AdminPanel = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>("stats");
 
+  // Fund adjustment dialog state
+  const [adjustUser, setAdjustUser] = useState<UserData | null>(null);
+  const [adjustCurrency, setAdjustCurrency] = useState<"star" | "dollar">("star");
+  const [adjustType, setAdjustType] = useState<"deposit" | "winning">("deposit");
+  const [adjustAmount, setAdjustAmount] = useState("");
+  const [adjustAction, setAdjustAction] = useState<"add" | "remove">("add");
+  const [adjusting, setAdjusting] = useState(false);
+
   const user = getTelegramUser();
   const isOwner = user?.id === OWNER_ID;
 
@@ -86,6 +94,43 @@ const AdminPanel = () => {
   useEffect(() => {
     if (isOwner) fetchAll();
   }, []);
+
+  const handleAdjust = async () => {
+    if (!adjustUser || !adjustAmount || adjusting) return;
+    const num = parseFloat(adjustAmount);
+    if (isNaN(num) || num <= 0) return;
+
+    setAdjusting(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/admin/adjust-balance`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ownerId: String(OWNER_ID),
+          targetUserId: adjustUser.telegramId,
+          currency: adjustCurrency,
+          balanceType: adjustType,
+          amount: adjustAction === "add" ? num : -num,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        // Update local user list
+        setUsers(prev => prev.map(u =>
+          u.telegramId === adjustUser.telegramId
+            ? { ...u, dollarBalance: data.dollarBalance, starBalance: data.starBalance, dollarWinning: data.dollarWinning, starWinning: data.starWinning }
+            : u
+        ));
+        setAdjustUser(null);
+        setAdjustAmount("");
+      } else {
+        alert(data.error || "Failed");
+      }
+    } catch (e) {
+      alert("Network error");
+    }
+    setAdjusting(false);
+  };
 
   if (!isOwner) {
     return (
@@ -221,7 +266,7 @@ const AdminPanel = () => {
                       )}
                     </div>
                     <p className="text-[10px] font-mono mb-2" style={{ color: "hsl(0 0% 50%)" }}>ID: {u.telegramId}</p>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-2 gap-2 mb-2">
                       <div className="rounded-lg p-2" style={{ background: "hsla(45, 80%, 50%, 0.1)" }}>
                         <p className="text-[10px]" style={{ color: "hsl(0 0% 50%)" }}>⭐ Star Wallet</p>
                         <p className="text-sm font-bold" style={{ color: "hsl(45 90% 60%)" }}>
@@ -235,6 +280,18 @@ const AdminPanel = () => {
                         </p>
                       </div>
                     </div>
+                    {/* Fund Adjust Button */}
+                    <button
+                      onClick={() => { setAdjustUser(u); setAdjustAmount(""); setAdjustAction("add"); }}
+                      className="w-full py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5"
+                      style={{
+                        background: "linear-gradient(135deg, hsla(45, 80%, 50%, 0.25), hsla(30, 80%, 50%, 0.25))",
+                        border: "1px solid hsla(45, 80%, 50%, 0.4)",
+                        color: "hsl(45 90% 70%)",
+                      }}
+                    >
+                      <DollarSign className="h-3.5 w-3.5" /> Adjust Fund
+                    </button>
                   </motion.div>
                 ))}
                 {users.length === 0 && (
@@ -276,6 +333,121 @@ const AdminPanel = () => {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Fund Adjustment Modal */}
+      {adjustUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ background: "hsla(0,0%,0%,0.7)" }}>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="w-full max-w-sm rounded-2xl p-5"
+            style={{
+              background: "linear-gradient(180deg, hsl(260 50% 22%) 0%, hsl(270 45% 18%) 100%)",
+              border: "1px solid hsla(45, 80%, 50%, 0.3)",
+            }}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-sm" style={{ color: "hsl(45 90% 70%)" }}>
+                💰 Adjust Fund — {adjustUser.firstName || adjustUser.username || adjustUser.telegramId}
+              </h3>
+              <button onClick={() => setAdjustUser(null)} className="p-1">
+                <X className="h-4 w-4" style={{ color: "hsl(0 0% 60%)" }} />
+              </button>
+            </div>
+
+            {/* Add / Remove toggle */}
+            <div className="flex gap-2 mb-3">
+              {(["add", "remove"] as const).map(a => (
+                <button
+                  key={a}
+                  onClick={() => setAdjustAction(a)}
+                  className="flex-1 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1"
+                  style={{
+                    background: adjustAction === a
+                      ? a === "add" ? "hsla(120, 60%, 40%, 0.3)" : "hsla(0, 70%, 45%, 0.3)"
+                      : "hsla(260, 40%, 30%, 0.4)",
+                    border: adjustAction === a
+                      ? `1px solid ${a === "add" ? "hsla(120, 60%, 50%, 0.5)" : "hsla(0, 70%, 50%, 0.5)"}`
+                      : "1px solid transparent",
+                    color: adjustAction === a
+                      ? a === "add" ? "hsl(120 60% 65%)" : "hsl(0 70% 65%)"
+                      : "hsl(0 0% 55%)",
+                  }}
+                >
+                  {a === "add" ? <Plus className="h-3.5 w-3.5" /> : <Minus className="h-3.5 w-3.5" />}
+                  {a === "add" ? "Add" : "Remove"}
+                </button>
+              ))}
+            </div>
+
+            {/* Currency toggle */}
+            <div className="flex gap-2 mb-3">
+              {(["star", "dollar"] as const).map(c => (
+                <button
+                  key={c}
+                  onClick={() => setAdjustCurrency(c)}
+                  className="flex-1 py-2 rounded-xl text-xs font-bold"
+                  style={{
+                    background: adjustCurrency === c ? "hsla(45, 80%, 50%, 0.25)" : "hsla(260, 40%, 30%, 0.4)",
+                    border: adjustCurrency === c ? "1px solid hsla(45, 80%, 50%, 0.4)" : "1px solid transparent",
+                    color: adjustCurrency === c ? "hsl(45 90% 70%)" : "hsl(0 0% 55%)",
+                  }}
+                >
+                  {c === "star" ? "⭐ Star" : "$ Dollar"}
+                </button>
+              ))}
+            </div>
+
+            {/* Balance type toggle */}
+            <div className="flex gap-2 mb-3">
+              {(["deposit", "winning"] as const).map(t => (
+                <button
+                  key={t}
+                  onClick={() => setAdjustType(t)}
+                  className="flex-1 py-2 rounded-xl text-xs font-bold"
+                  style={{
+                    background: adjustType === t ? "hsla(280, 60%, 50%, 0.25)" : "hsla(260, 40%, 30%, 0.4)",
+                    border: adjustType === t ? "1px solid hsla(280, 60%, 50%, 0.4)" : "1px solid transparent",
+                    color: adjustType === t ? "hsl(280 60% 75%)" : "hsl(0 0% 55%)",
+                  }}
+                >
+                  {t === "deposit" ? "Deposit" : "Winning"}
+                </button>
+              ))}
+            </div>
+
+            {/* Amount input */}
+            <input
+              type="number"
+              value={adjustAmount}
+              onChange={e => setAdjustAmount(e.target.value)}
+              placeholder="Enter amount"
+              className="w-full rounded-xl px-4 py-3 text-sm font-bold mb-4 outline-none"
+              style={{
+                background: "hsla(260, 40%, 18%, 0.8)",
+                border: "1px solid hsla(260, 40%, 40%, 0.3)",
+                color: "hsl(0 0% 90%)",
+              }}
+            />
+
+            {/* Confirm button */}
+            <button
+              onClick={handleAdjust}
+              disabled={adjusting || !adjustAmount || parseFloat(adjustAmount) <= 0}
+              className="w-full py-3 rounded-xl text-sm font-bold disabled:opacity-40"
+              style={{
+                background: adjustAction === "add"
+                  ? "linear-gradient(135deg, hsl(120 60% 40%), hsl(140 50% 35%))"
+                  : "linear-gradient(135deg, hsl(0 70% 45%), hsl(15 60% 40%))",
+                color: "hsl(0 0% 95%)",
+              }}
+            >
+              {adjusting ? "Processing..." : `${adjustAction === "add" ? "➕ Add" : "➖ Remove"} ${adjustAmount || "0"} ${adjustCurrency === "star" ? "⭐" : "$"}`}
+            </button>
+          </motion.div>
         </div>
       )}
     </div>
