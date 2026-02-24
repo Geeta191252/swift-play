@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import createAdHandler from "monetag-tg-sdk";
@@ -16,21 +16,44 @@ const tasks = [
     title: "Watch short ads",
     subtitle: "Rewarded Interstitial",
     emoji: "🤩",
+    maxAds: 5,
   },
   {
     title: "Click to get reward",
     subtitle: "Rewarded Popup",
     emoji: "😎",
+    maxAds: 7,
   },
 ];
 
+const getTodayKey = () => new Date().toISOString().slice(0, 10);
+
+const loadTodayCounts = (): number[] => {
+  try {
+    const saved = localStorage.getItem("earn_ad_counts");
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed.date === getTodayKey()) return parsed.counts;
+    }
+  } catch {}
+  return tasks.map(() => 0);
+};
+
+const saveTodayCounts = (counts: number[]) => {
+  localStorage.setItem("earn_ad_counts", JSON.stringify({ date: getTodayKey(), counts }));
+};
+
 const EarnScreen = () => {
-  const [adsWatched, setAdsWatched] = useState(0);
+  const [adCounts, setAdCounts] = useState<number[]>(loadTodayCounts);
   const [loadingIdx, setLoadingIdx] = useState<number | null>(null);
   const { refreshBalance } = useBalanceContext();
 
   const handleClaim = async (idx: number) => {
     if (loadingIdx !== null) return;
+    if (adCounts[idx] >= tasks[idx].maxAds) {
+      toast.info("Today's limit reached! Come back tomorrow.");
+      return;
+    }
 
     setLoadingIdx(idx);
     try {
@@ -39,8 +62,10 @@ const EarnScreen = () => {
 
       await adHandler(String(userId));
 
-      const newCount = adsWatched + 1;
-      setAdsWatched(newCount);
+      const newCounts = [...adCounts];
+      newCounts[idx] += 1;
+      setAdCounts(newCounts);
+      saveTodayCounts(newCounts);
 
       await fetch(`${API_BASE_URL}/game/result`, {
         method: "POST",
@@ -55,13 +80,15 @@ const EarnScreen = () => {
       });
 
       refreshBalance();
-      toast.success(`Ad complete! +1 ⭐ earned (${newCount} total)`);
+      toast.success(`Ad complete! +1 ⭐ earned (${newCounts[idx]}/${tasks[idx].maxAds})`);
     } catch {
       toast.info("Ad skipped or closed.");
     } finally {
       setLoadingIdx(null);
     }
   };
+
+  const totalWatched = adCounts.reduce((a, b) => a + b, 0);
 
   return (
     <div className="px-4 pt-4 space-y-4">
@@ -87,27 +114,34 @@ const EarnScreen = () => {
                 {task.title}
               </h4>
               <p className="text-xs truncate" style={{ color: "hsla(0,0%,10%,0.6)" }}>
-                {task.subtitle}
+                {task.subtitle} — {adCounts[i]}/{task.maxAds}
               </p>
             </div>
-            <button
-              onClick={() => handleClaim(i)}
-              disabled={loadingIdx !== null}
-              className="px-4 py-1.5 rounded-full text-sm font-bold shrink-0 active:scale-95 transition-transform"
-              style={{
-                background: loadingIdx === i ? "hsl(0,0%,70%)" : "hsl(0,0%,100%)",
-                color: "hsl(0,0%,10%)",
-                border: "2px solid hsl(0,0%,85%)",
-              }}
-            >
-              {loadingIdx === i ? "..." : "Claim"}
-            </button>
+            {adCounts[i] >= task.maxAds ? (
+              <span className="px-4 py-1.5 rounded-full text-sm font-bold shrink-0"
+                style={{ background: "hsl(120,60%,40%)", color: "white" }}>
+                ✅ Done
+              </span>
+            ) : (
+              <button
+                onClick={() => handleClaim(i)}
+                disabled={loadingIdx !== null}
+                className="px-4 py-1.5 rounded-full text-sm font-bold shrink-0 active:scale-95 transition-transform"
+                style={{
+                  background: loadingIdx === i ? "hsl(0,0%,70%)" : "hsl(0,0%,100%)",
+                  color: "hsl(0,0%,10%)",
+                  border: "2px solid hsl(0,0%,85%)",
+                }}
+              >
+                {loadingIdx === i ? "..." : "Claim"}
+              </button>
+            )}
           </motion.div>
         ))}
       </div>
 
       <p className="text-center text-sm font-semibold text-foreground">
-        Ads Watched Today: {adsWatched} 🎬
+        Ads Watched Today: {totalWatched} / {tasks.reduce((a, t) => a + t.maxAds, 0)} 🎬
       </p>
 
       <div className="text-xs text-muted-foreground text-center px-2 space-y-1">
