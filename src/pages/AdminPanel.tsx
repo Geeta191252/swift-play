@@ -351,16 +351,14 @@ const AdminPanel = () => {
                     }}>
                       {w.currency === "star" ? `⭐ ${Math.abs(w.amount)}` : `$${Math.abs(w.amount).toFixed(2)}`}
                     </p>
-                    {/* Crypto Address */}
-                    {w.cryptoAddress && (
-                      <div className="rounded-lg p-2" style={{ background: "hsla(200, 60%, 50%, 0.1)", border: "1px solid hsla(200, 60%, 50%, 0.2)" }}>
-                        <p className="text-[10px] font-bold" style={{ color: "hsl(200 70% 60%)" }}>📍 Crypto Address:</p>
-                        <p className="text-[11px] font-mono break-all" style={{ color: "hsl(0 0% 80%)" }}>{w.cryptoAddress}</p>
-                        {w.withdrawalNetwork && (
-                          <p className="text-[10px] mt-1" style={{ color: "hsl(0 0% 55%)" }}>🔗 Network: {w.withdrawalNetwork}</p>
-                        )}
-                      </div>
-                    )}
+                    {/* Crypto Address & Network */}
+                    <div className="rounded-lg p-2 space-y-1" style={{ background: "hsla(200, 60%, 50%, 0.1)", border: "1px solid hsla(200, 60%, 50%, 0.2)" }}>
+                      <p className="text-[10px] font-bold" style={{ color: "hsl(200 70% 60%)" }}>
+                        🔗 Network: <span style={{ color: "hsl(45 80% 65%)" }}>{w.withdrawalNetwork || "Not specified"}</span>
+                      </p>
+                      <p className="text-[10px] font-bold" style={{ color: "hsl(200 70% 60%)" }}>📍 Crypto Address:</p>
+                      <p className="text-[11px] font-mono break-all" style={{ color: "hsl(0 0% 80%)" }}>{w.cryptoAddress || "N/A"}</p>
+                    </div>
                     <p className="text-[10px]" style={{ color: "hsl(0 0% 45%)" }}>
                       {new Date(w.createdAt).toLocaleString()}
                     </p>
