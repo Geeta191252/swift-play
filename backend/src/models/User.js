@@ -28,6 +28,14 @@ const userSchema = new mongoose.Schema(
       default: 0,
       min: 0,
     },
+    referredBy: {
+      type: Number,
+      default: null,
+    },
+    referralCount: {
+      type: Number,
+      default: 0,
+    },
     username: String,
     firstName: String,
     lastName: String,

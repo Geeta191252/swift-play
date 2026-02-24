@@ -483,6 +483,81 @@ app.post("/api/admin/users", async (req, res) => {
 });
 
 // ============================================
+// POST /api/referral - Process referral when user opens app via invite link
+// ============================================
+app.post("/api/referral", async (req, res) => {
+  try {
+    const { userId, referrerId } = req.body;
+
+    if (!userId || !referrerId) {
+      return res.status(400).json({ error: "Missing userId or referrerId" });
+    }
+
+    const numericUserId = Number(userId);
+    const numericReferrerId = Number(referrerId);
+
+    if (!numericUserId || !numericReferrerId || numericUserId === numericReferrerId) {
+      return res.status(400).json({ error: "Invalid referral" });
+    }
+
+    // Get or create both users
+    const user = await getOrCreateUser(numericUserId);
+    const referrer = await getOrCreateUser(numericReferrerId);
+
+    if (!referrer || referrer.telegramId === 0) {
+      return res.status(400).json({ error: "Referrer not found" });
+    }
+
+    // Check if user already has a referrer
+    if (user.referredBy) {
+      return res.json({ success: false, message: "Already referred" });
+    }
+
+    // Set referral
+    user.referredBy = numericReferrerId;
+    await user.save();
+
+    // Increment referrer's count
+    referrer.referralCount = (referrer.referralCount || 0) + 1;
+    const count = referrer.referralCount;
+
+    // Reward: 1st=2⭐, 2nd=3⭐, 3rd+=3⭐
+    let reward = count === 1 ? 2 : 3;
+
+    referrer.starWinning = (referrer.starWinning || 0) + reward;
+    await referrer.save();
+
+    // Log reward transaction
+    await Transaction.create({
+      telegramId: numericReferrerId,
+      type: "referral",
+      currency: "star",
+      amount: reward,
+      status: "completed",
+      description: `Referral reward: ${reward} Stars (referred user ${numericUserId})`,
+    });
+
+    // Notify referrer
+    try {
+      await bot.sendMessage(numericReferrerId,
+        `🎉 *New Referral!*\n\n` +
+        `👤 A friend joined using your link!\n` +
+        `⭐ You earned ${reward} Stars!\n` +
+        `📊 Total referrals: ${count}`,
+        { parse_mode: "Markdown" }
+      );
+    } catch (botErr) {
+      console.error("Failed to send referral notification:", botErr.message);
+    }
+
+    return res.json({ success: true, reward, totalReferrals: count });
+  } catch (error) {
+    console.error("Referral error:", error);
+    return res.status(500).json({ error: "Referral processing failed" });
+  }
+});
+
+// ============================================
 // POST /api/admin/adjust-balance - Admin adjust user funds (+/-)
 // ============================================
 app.post("/api/admin/adjust-balance", async (req, res) => {

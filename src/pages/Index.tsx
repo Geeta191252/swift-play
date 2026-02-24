@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import SplashScreen from "@/components/SplashScreen";
 import HomeScreen from "@/components/HomeScreen";
+import { processReferral } from "@/lib/telegram";
 
 const Index = () => {
   const [phase, setPhase] = useState<"preload" | "splash" | "ready">("preload");
@@ -10,6 +11,11 @@ const Index = () => {
     const t1 = setTimeout(() => setPhase("splash"), 1500);
     const t2 = setTimeout(() => setPhase("ready"), 4500);
     return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, []);
+
+  // Process referral on app load
+  useEffect(() => {
+    processReferral();
   }, []);
 
   return (
