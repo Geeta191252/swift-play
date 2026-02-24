@@ -376,6 +376,67 @@ app.post("/api/admin/users", async (req, res) => {
 });
 
 // ============================================
+// POST /api/admin/adjust-balance - Admin adjust user funds (+/-)
+// ============================================
+app.post("/api/admin/adjust-balance", async (req, res) => {
+  try {
+    const { ownerId, targetUserId, currency, amount, balanceType } = req.body;
+    if (String(ownerId) !== "6965488457") {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
+    if (!targetUserId || !currency || amount === undefined || !balanceType) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    const user = await getOrCreateUser(targetUserId);
+    if (!user || user.telegramId === 0) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Determine which field to adjust
+    let field;
+    if (currency === "dollar" && balanceType === "deposit") field = "dollarBalance";
+    else if (currency === "dollar" && balanceType === "winning") field = "dollarWinning";
+    else if (currency === "star" && balanceType === "deposit") field = "starBalance";
+    else if (currency === "star" && balanceType === "winning") field = "starWinning";
+    else return res.status(400).json({ error: "Invalid currency/balanceType" });
+
+    const currentVal = user[field] || 0;
+    const newVal = currentVal + amount;
+    if (newVal < 0) {
+      return res.status(400).json({ error: `Cannot go below 0. Current: ${currentVal}` });
+    }
+
+    user[field] = newVal;
+    await user.save();
+
+    // Log transaction
+    await Transaction.create({
+      telegramId: targetUserId,
+      type: amount > 0 ? "bonus" : "withdraw",
+      currency,
+      amount,
+      status: "completed",
+      description: `Admin ${amount > 0 ? "added" : "removed"} ${Math.abs(amount)} ${currency} (${balanceType})`,
+    });
+
+    return res.json({
+      success: true,
+      field,
+      oldValue: currentVal,
+      newValue: newVal,
+      dollarBalance: user.dollarBalance,
+      starBalance: user.starBalance,
+      dollarWinning: user.dollarWinning || 0,
+      starWinning: user.starWinning || 0,
+    });
+  } catch (error) {
+    console.error("Admin adjust error:", error);
+    return res.status(500).json({ error: "Adjustment failed" });
+  }
+});
+
+// ============================================
 // POST /api/convert-stars - Convert Stars to Dollars
 // Rate: 100 Stars = $1
 // ============================================
