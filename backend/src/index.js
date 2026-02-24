@@ -352,6 +352,30 @@ app.post("/api/admin/stats", async (req, res) => {
 });
 
 // ============================================
+// POST /api/admin/users - Get all users list with balances
+// ============================================
+app.post("/api/admin/users", async (req, res) => {
+  try {
+    const { ownerId } = req.body;
+    if (String(ownerId) !== "6965488457") {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
+
+    const users = await User.find({}).sort({ createdAt: -1 }).lean();
+
+    // Get pending withdrawal requests
+    const withdrawals = await Transaction.find({ type: "withdraw", status: "pending" })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    return res.json({ users, withdrawals });
+  } catch (error) {
+    console.error("Admin users error:", error);
+    return res.status(500).json({ error: "Failed to fetch users" });
+  }
+});
+
+// ============================================
 // POST /api/convert-stars - Convert Stars to Dollars
 // Rate: 100 Stars = $1
 // ============================================
