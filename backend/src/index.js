@@ -122,13 +122,14 @@ app.post("/api/withdraw", async (req, res) => {
 
     const user = await getOrCreateUser(userId);
 
-    const balanceField = currency === "dollar" ? "dollarBalance" : "starBalance";
-    if (user[balanceField] < amount) {
-      return res.status(400).json({ error: "Insufficient balance" });
+    // Withdraw only from winning
+    const winningField = currency === "dollar" ? "dollarWinning" : "starWinning";
+    if ((user[winningField] || 0) < amount) {
+      return res.status(400).json({ error: "Insufficient winning balance. Withdrawals are only allowed from winnings." });
     }
 
-    // Deduct balance
-    user[balanceField] -= amount;
+    // Deduct from winning
+    user[winningField] -= amount;
     await user.save();
 
     // Log transaction
@@ -147,8 +148,8 @@ app.post("/api/withdraw", async (req, res) => {
 
     return res.json({
       success: true,
-      newBalance: user[balanceField],
-      message: `Withdrawal of ${amount} ${currency} processed`,
+      newWinningBalance: user[winningField],
+      message: `Withdrawal of ${amount} ${currency} from winnings processed`,
     });
   } catch (error) {
     console.error("Withdraw error:", error);
@@ -169,6 +170,8 @@ app.post("/api/balance", async (req, res) => {
     return res.json({
       dollarBalance: user.dollarBalance,
       starBalance: user.starBalance,
+      dollarWinning: user.dollarWinning || 0,
+      starWinning: user.starWinning || 0,
     });
   } catch (error) {
     console.error("Balance error:", error);
@@ -221,7 +224,7 @@ app.get("/api/debug", (req, res) => {
 
 // Health check API
 app.get("/api/health", (req, res) => {
-  res.json({ status: "ok", service: "telegram-wallet-backend", version: "5.0-clean-wins" });
+  res.json({ status: "ok", service: "telegram-wallet-backend", version: "6.0-wallet-winning-split" });
 });
 
 // ============================================
@@ -409,14 +412,22 @@ app.post("/api/game/result", async (req, res) => {
 
     const user = await getOrCreateUser(userId);
     const balanceField = currency === "dollar" ? "dollarBalance" : "starBalance";
-    const netAmount = winAmount - betAmount;
+    const winningField = currency === "dollar" ? "dollarWinning" : "starWinning";
 
-    user[balanceField] += netAmount;
-    if (user[balanceField] < 0) user[balanceField] = 0;
+    // Bet deducts from wallet only
+    if (betAmount > 0) {
+      user[balanceField] -= betAmount;
+      if (user[balanceField] < 0) user[balanceField] = 0;
+    }
+
+    // Win adds to winning only
+    if (winAmount > 0) {
+      user[winningField] = (user[winningField] || 0) + winAmount;
+    }
+
     await user.save();
 
     if (winAmount > 0) {
-      // Won: store gross winAmount (not net) so winning display shows total won
       await Transaction.create({
         telegramId: userId,
         type: "win",
@@ -427,7 +438,6 @@ app.post("/api/game/result", async (req, res) => {
       });
     }
     if (betAmount > 0) {
-      // Bet: always record the bet amount as a separate transaction
       await Transaction.create({
         telegramId: userId,
         type: "bet",
@@ -441,6 +451,8 @@ app.post("/api/game/result", async (req, res) => {
     return res.json({
       dollarBalance: user.dollarBalance,
       starBalance: user.starBalance,
+      dollarWinning: user.dollarWinning || 0,
+      starWinning: user.starWinning || 0,
     });
   } catch (error) {
     console.error("Game result error:", error);
@@ -628,15 +640,15 @@ app.post("/api/ton/withdraw", async (req, res) => {
     }
 
     const user = await getOrCreateUser(userId);
-    if (user.dollarBalance < dollarAmount) {
-      return res.status(400).json({ error: "Insufficient dollar balance" });
+    if ((user.dollarWinning || 0) < dollarAmount) {
+      return res.status(400).json({ error: "Insufficient winning balance. Withdrawals are only from winnings." });
     }
 
     const tonPrice = await getTonUsdPrice();
     const tonAmount = dollarAmount / tonPrice;
 
-    // Deduct balance
-    user.dollarBalance -= dollarAmount;
+    // Deduct from winning
+    user.dollarWinning -= dollarAmount;
     await user.save();
 
     // Create withdrawal transaction (owner will process manually)

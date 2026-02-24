@@ -107,8 +107,8 @@ const MinesGame = () => {
       if (newSafePicks >= TOTAL_CELLS - mineCount) {
         const prize = Math.floor(selectedBet * mult * 100) / 100;
         setWinAmount(prize);
-        if (activeWallet === "dollar") setLocalDollarAdj(p => p + prize);
-        else setLocalStarAdj(p => p + prize);
+        // Win goes to winning pool, not wallet
+
         setPhase("cashed");
         if (soundRef.current) playWinSound();
         setRound(r => r + 1);
@@ -123,8 +123,8 @@ const MinesGame = () => {
     if (phase !== "playing" || safePicks === 0) return;
     const prize = Math.floor(selectedBet * currentMultiplier * 100) / 100;
     setWinAmount(prize);
-    if (activeWallet === "dollar") setLocalDollarAdj(p => p + prize);
-    else setLocalStarAdj(p => p + prize);
+    // Win goes to winning pool, not wallet
+
 
     // Reveal all mines
     const newGrid = [...grid];

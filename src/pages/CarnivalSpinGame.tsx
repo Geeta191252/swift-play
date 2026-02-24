@@ -109,8 +109,8 @@ const CarnivalSpinGame = () => {
       if (seg.multiplier > 0) {
         setWinAmount(prize); // Show gross payout (bet × multiplier)
         setTotalLost(0);
-        if (activeWallet === "dollar") setLocalDollarAdj(p => p + prize);
-        else setLocalStarAdj(p => p + prize);
+        // Win goes to winning pool, not wallet
+
         if (prize > 0 && soundRef.current) playWinSound();
       } else {
         setWinAmount(0);

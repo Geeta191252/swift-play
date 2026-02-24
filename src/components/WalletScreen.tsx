@@ -107,7 +107,7 @@ const WalletScreen = () => {
     orderId: string;
   } | null>(null);
 
-  const { dollarBalance, starBalance, refreshBalance } = useBalanceContext();
+  const { dollarBalance, starBalance, dollarWinning, starWinning, refreshBalance } = useBalanceContext();
   const [paymentStatus, setPaymentStatus] = useState<string | null>(null);
 
   const apiBase = import.meta.env.VITE_API_BASE_URL || "https://broken-bria-chetan1-ea890b93.koyeb.app/api";
@@ -151,18 +151,9 @@ const WalletScreen = () => {
     retry: 1,
   });
 
-  // Fetch winnings (only from game wins)
-  const { data: winnings } = useQuery({
-    queryKey: ["winnings"],
-    queryFn: fetchWinnings,
-    placeholderData: { dollarWinnings: 0, starWinnings: 0, dollarDeposits: 0, starDeposits: 0 },
-    retry: 1,
-    refetchInterval: 30000,
-  });
-
-  // Winning = sirf total game winnings (gross) — tracking ke liye
-  const dollarWinnings = winnings?.dollarWinnings ?? 0;
-  const starWinnings = winnings?.starWinnings ?? 0;
+  // Winning from context (stored in DB now)
+  const dollarWinnings = dollarWinning;
+  const starWinnings = starWinning;
 
   // Fetch TON price
   useQuery({
