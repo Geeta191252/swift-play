@@ -414,13 +414,24 @@ app.post("/api/game/result", async (req, res) => {
     const balanceField = currency === "dollar" ? "dollarBalance" : "starBalance";
     const winningField = currency === "dollar" ? "dollarWinning" : "starWinning";
 
-    // Bet deducts from wallet only
+    const walletBalance = user[balanceField] || 0;
+    const winningBalance = user[winningField] || 0;
+    const totalPlayable = walletBalance + winningBalance;
+
+    // Bet deducts from combined playable amount: first wallet, then winning
     if (betAmount > 0) {
-      user[balanceField] -= betAmount;
-      if (user[balanceField] < 0) user[balanceField] = 0;
+      if (totalPlayable < betAmount) {
+        return res.status(400).json({ error: "Insufficient combined balance" });
+      }
+
+      const deductFromWallet = Math.min(walletBalance, betAmount);
+      const remainingAfterWallet = betAmount - deductFromWallet;
+
+      user[balanceField] = walletBalance - deductFromWallet;
+      user[winningField] = winningBalance - remainingAfterWallet;
     }
 
-    // Win adds to winning only
+    // Win adds to winning pool
     if (winAmount > 0) {
       user[winningField] = (user[winningField] || 0) + winAmount;
     }

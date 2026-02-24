@@ -154,6 +154,8 @@ const WalletScreen = () => {
   // Winning from context (stored in DB now)
   const dollarWinnings = dollarWinning;
   const starWinnings = starWinning;
+  const totalDollarWallet = dollarBalance + dollarWinnings;
+  const totalStarWallet = starBalance + starWinnings;
 
   // Fetch TON price
   useQuery({
@@ -417,7 +419,7 @@ const WalletScreen = () => {
           <div className="flex items-center gap-1.5 text-muted-foreground text-xs font-medium">
             <DollarSign className="h-3.5 w-3.5" /> Dollar ($)
           </div>
-          <p className="font-bold text-2xl text-foreground">${dollarBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+          <p className="font-bold text-2xl text-foreground">${totalDollarWallet.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
         </motion.div>
         <motion.div
           initial={{ opacity: 0, y: 16 }}
@@ -430,7 +432,7 @@ const WalletScreen = () => {
               <div className="flex items-center gap-1.5 text-muted-foreground text-xs font-medium">
                 <Star className="h-3.5 w-3.5" /> Stars
               </div>
-              <p className="font-bold text-2xl text-foreground">{starBalance.toLocaleString()}</p>
+              <p className="font-bold text-2xl text-foreground">{totalStarWallet.toLocaleString()}</p>
             </div>
             <Button
               size="sm"

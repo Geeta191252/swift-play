@@ -29,11 +29,11 @@ const MinesGame = () => {
   const soundRef = useRef(true);
   useEffect(() => { soundRef.current = soundOn; }, [soundOn]);
 
-  const { dollarBalance, starBalance, refreshBalance } = useBalanceContext();
+  const { dollarBalance, starBalance, dollarWinning, starWinning, refreshBalance } = useBalanceContext();
   const [localDollarAdj, setLocalDollarAdj] = useState(0);
   const [localStarAdj, setLocalStarAdj] = useState(0);
-  const gameDollarBalance = dollarBalance + localDollarAdj;
-  const gameStarBalance = starBalance + localStarAdj;
+  const gameDollarBalance = dollarBalance + dollarWinning + localDollarAdj;
+  const gameStarBalance = starBalance + starWinning + localStarAdj;
 
   const [activeWallet, setActiveWallet] = useState<"dollar" | "star">("dollar");
   const [selectedBet, setSelectedBet] = useState(1);
