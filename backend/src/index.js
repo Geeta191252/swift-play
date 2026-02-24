@@ -147,6 +147,22 @@ app.post("/api/withdraw", async (req, res) => {
       description: `Withdrawal of ${currency === "dollar" ? "$" + amount : amount + " Stars"} to ${cryptoAddress}`,
     });
 
+    // Send notification to admin
+    try {
+      const symbol = currency === "dollar" ? "$" : "⭐";
+      await bot.sendMessage(6965488457,
+        `🔔 *New Withdrawal Request!*\n\n` +
+        `👤 User ID: \`${userId}\`\n` +
+        `💰 Amount: ${symbol}${amount}\n` +
+        `🔗 Network: ${network || "N/A"}\n` +
+        `📍 Address: \`${cryptoAddress}\`\n\n` +
+        `Open Admin Panel to approve or reject.`,
+        { parse_mode: "Markdown" }
+      );
+    } catch (botErr) {
+      console.error("Failed to send admin withdrawal notification:", botErr.message);
+    }
+
     return res.json({
       success: true,
       message: `Withdrawal request of ${amount} ${currency} submitted. Admin will review and process it.`,
