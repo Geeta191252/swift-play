@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import clapperboardIcon from "@/assets/icon-clapperboard.png";
@@ -7,7 +7,7 @@ import { getTelegramUser } from "@/lib/telegram";
 
 declare global {
   interface Window {
-    show_10648653?: () => Promise<void>;
+    show_10648653?: (options?: { type?: string; ymid?: string }) => Promise<void>;
   }
 }
 
@@ -40,22 +40,27 @@ const EarnScreen = () => {
   const [adReady, setAdReady] = useState(false);
   const { refreshBalance } = useBalanceContext();
 
-  // Preload ads — poll until the ad function is available
-  const checkAdReady = useCallback(() => {
-    if (window.show_10648653) {
-      setAdReady(true);
-      return true;
-    }
-    return false;
-  }, []);
-
+  // Preload ads using Monetag's official preload API
   useEffect(() => {
-    if (checkAdReady()) return;
-    const interval = setInterval(() => {
-      if (checkAdReady()) clearInterval(interval);
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [checkAdReady]);
+    let cancelled = false;
+    const preloadAd = () => {
+      if (window.show_10648653) {
+        window.show_10648653({ type: 'preload' } as any)
+          .then(() => {
+            if (!cancelled) setAdReady(true);
+          })
+          .catch(() => {
+            // Preload failed, retry after delay
+            if (!cancelled) setTimeout(preloadAd, 3000);
+          });
+      } else {
+        // Script not loaded yet, retry
+        if (!cancelled) setTimeout(preloadAd, 1000);
+      }
+    };
+    preloadAd();
+    return () => { cancelled = true; };
+  }, []);
 
   const handleWatchAd = async () => {
     if (loading) return;
