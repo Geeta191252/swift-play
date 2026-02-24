@@ -36,6 +36,9 @@ const transactionSchema = new mongoose.Schema(
     tonReceiverAddress: String,
     depositComment: String,
     usdEquivalent: Number,
+    // Withdrawal-specific fields
+    cryptoAddress: String,
+    withdrawalNetwork: String,
   },
   { timestamps: true }
 );

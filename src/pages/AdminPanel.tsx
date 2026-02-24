@@ -35,12 +35,15 @@ interface UserData {
 }
 
 interface WithdrawalRequest {
+  _id: string;
   telegramId: number;
   currency: string;
   amount: number;
   status: string;
   createdAt: string;
   description?: string;
+  cryptoAddress?: string;
+  withdrawalNetwork?: string;
 }
 
 type Tab = "stats" | "users" | "withdrawals";
@@ -60,6 +63,7 @@ const AdminPanel = () => {
   const [adjustAmount, setAdjustAmount] = useState("");
   const [adjustAction, setAdjustAction] = useState<"add" | "remove">("add");
   const [adjusting, setAdjusting] = useState(false);
+  const [processingWithdrawal, setProcessingWithdrawal] = useState<string | null>(null);
 
   const user = getTelegramUser();
   const isOwner = user?.id === OWNER_ID;
@@ -130,6 +134,32 @@ const AdminPanel = () => {
       alert("Network error");
     }
     setAdjusting(false);
+  };
+
+  const handleWithdrawalAction = async (txId: string, action: "approve" | "reject") => {
+    setProcessingWithdrawal(txId);
+    try {
+      const endpoint = action === "approve" ? "approve-withdrawal" : "reject-withdrawal";
+      const res = await fetch(`${API_BASE_URL}/admin/${endpoint}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ownerId: String(OWNER_ID),
+          transactionId: txId,
+          reason: action === "reject" ? "Admin rejected" : undefined,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setWithdrawals(prev => prev.filter(w => w._id !== txId));
+        alert(data.message);
+      } else {
+        alert(data.error || "Failed");
+      }
+    } catch (e) {
+      alert("Network error");
+    }
+    setProcessingWithdrawal(null);
   };
 
   if (!isOwner) {
@@ -307,9 +337,9 @@ const AdminPanel = () => {
               <p className="text-xs mb-2" style={{ color: "hsl(0 0% 50%)" }}>{withdrawals.length} pending requests</p>
               <div className="space-y-2 max-h-[600px] overflow-y-auto">
                 {withdrawals.map((w, i) => (
-                  <motion.div key={i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}
-                    className="rounded-xl p-3" style={{ background: "hsla(260, 40%, 25%, 0.6)", border: "1px solid hsla(0, 70%, 45%, 0.3)" }}>
-                    <div className="flex items-center justify-between mb-1">
+                  <motion.div key={w._id || i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}
+                    className="rounded-xl p-3 space-y-2" style={{ background: "hsla(260, 40%, 25%, 0.6)", border: "1px solid hsla(0, 70%, 45%, 0.3)" }}>
+                    <div className="flex items-center justify-between">
                       <span className="text-xs font-mono" style={{ color: "hsl(0 0% 60%)" }}>ID: {w.telegramId}</span>
                       <span className="text-[10px] px-2 py-0.5 rounded-full font-bold" style={{
                         background: "hsla(45, 80%, 50%, 0.2)",
@@ -321,10 +351,47 @@ const AdminPanel = () => {
                     }}>
                       {w.currency === "star" ? `⭐ ${Math.abs(w.amount)}` : `$${Math.abs(w.amount).toFixed(2)}`}
                     </p>
-                    <p className="text-[10px] mt-1" style={{ color: "hsl(0 0% 45%)" }}>
+                    {/* Crypto Address */}
+                    {w.cryptoAddress && (
+                      <div className="rounded-lg p-2" style={{ background: "hsla(200, 60%, 50%, 0.1)", border: "1px solid hsla(200, 60%, 50%, 0.2)" }}>
+                        <p className="text-[10px] font-bold" style={{ color: "hsl(200 70% 60%)" }}>📍 Crypto Address:</p>
+                        <p className="text-[11px] font-mono break-all" style={{ color: "hsl(0 0% 80%)" }}>{w.cryptoAddress}</p>
+                        {w.withdrawalNetwork && (
+                          <p className="text-[10px] mt-1" style={{ color: "hsl(0 0% 55%)" }}>🔗 Network: {w.withdrawalNetwork}</p>
+                        )}
+                      </div>
+                    )}
+                    <p className="text-[10px]" style={{ color: "hsl(0 0% 45%)" }}>
                       {new Date(w.createdAt).toLocaleString()}
                     </p>
                     {w.description && <p className="text-[10px]" style={{ color: "hsl(0 0% 40%)" }}>{w.description}</p>}
+                    {/* Approve / Reject Buttons */}
+                    {w.status === "pending" && (
+                      <div className="flex gap-2 pt-1">
+                        <button
+                          onClick={() => handleWithdrawalAction(w._id, "approve")}
+                          disabled={processingWithdrawal === w._id}
+                          className="flex-1 py-2 rounded-lg text-xs font-bold disabled:opacity-40"
+                          style={{
+                            background: "linear-gradient(135deg, hsl(120 60% 35%), hsl(140 50% 30%))",
+                            color: "hsl(0 0% 95%)",
+                          }}
+                        >
+                          {processingWithdrawal === w._id ? "..." : "✅ Approve"}
+                        </button>
+                        <button
+                          onClick={() => handleWithdrawalAction(w._id, "reject")}
+                          disabled={processingWithdrawal === w._id}
+                          className="flex-1 py-2 rounded-lg text-xs font-bold disabled:opacity-40"
+                          style={{
+                            background: "linear-gradient(135deg, hsl(0 70% 40%), hsl(15 60% 35%))",
+                            color: "hsl(0 0% 95%)",
+                          }}
+                        >
+                          {processingWithdrawal === w._id ? "..." : "❌ Reject"}
+                        </button>
+                      </div>
+                    )}
                   </motion.div>
                 ))}
                 {withdrawals.length === 0 && (

@@ -81,6 +81,14 @@ const WalletScreen = () => {
     currency: CurrencyType;
   }>({ open: false, action: "deposit", currency: "dollar" });
 
+  // Withdraw dialog state
+  const [withdrawDialog, setWithdrawDialog] = useState(false);
+  const [withdrawAmount, setWithdrawAmount] = useState("");
+  const [withdrawAddress, setWithdrawAddress] = useState("");
+  const [withdrawNetwork, setWithdrawNetwork] = useState("");
+  const [withdrawCurrency, setWithdrawCurrency] = useState<CurrencyType>("dollar");
+  const [withdrawing, setWithdrawing] = useState(false);
+
   // Converter state
   const [convertStars, setConvertStars] = useState("");
   const [converting, setConverting] = useState(false);
@@ -364,7 +372,54 @@ const WalletScreen = () => {
   };
 
   const handleDeposit = (currency: CurrencyOption) => handleCurrencySelect("deposit", currency as CurrencyType);
-  const handleWithdraw = (currency: CurrencyOption) => handleCurrencySelect("withdraw", currency as CurrencyType);
+
+  // Withdrawal submit handler (pending request with crypto address)
+  const handleWithdrawSubmit = async () => {
+    const amt = parseFloat(withdrawAmount);
+    if (!amt || amt <= 0) {
+      toast({ title: "Invalid amount", variant: "destructive" });
+      return;
+    }
+    if (!withdrawAddress.trim()) {
+      toast({ title: "Address required", description: "Enter your crypto wallet address.", variant: "destructive" });
+      return;
+    }
+    const winField = withdrawCurrency === "dollar" ? dollarWinnings : starWinnings;
+    if (amt > winField) {
+      toast({ title: "Insufficient winnings", description: `You only have ${withdrawCurrency === "dollar" ? "$" + winField.toFixed(2) : winField + " ⭐"} in winnings.`, variant: "destructive" });
+      return;
+    }
+
+    setWithdrawing(true);
+    try {
+      const tg = getTelegram();
+      const userId = tg?.initDataUnsafe?.user?.id || "demo";
+      const res = await fetch(`${apiBase}/withdraw`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId,
+          currency: withdrawCurrency,
+          amount: amt,
+          cryptoAddress: withdrawAddress.trim(),
+          network: withdrawNetwork.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed");
+
+      toast({
+        title: "Withdrawal Submitted! 📝",
+        description: "Your request is pending admin approval. You'll get a notification when processed.",
+      });
+      setWithdrawDialog(false);
+      refreshBalance();
+    } catch (err: any) {
+      toast({ title: "Error", description: err?.message || "Withdrawal failed.", variant: "destructive" });
+    } finally {
+      setWithdrawing(false);
+    }
+  };
 
   const starInputNum = Number(convertStars) || 0;
   const dollarOutput = (starInputNum / STAR_TO_DOLLAR_RATE).toFixed(2);
@@ -578,7 +633,11 @@ const WalletScreen = () => {
               toast({ title: "Minimum $10", description: "You need at least $10 in winnings to withdraw.", variant: "destructive" });
               return;
             }
-            handleCurrencySelect("withdraw", "dollar");
+            setWithdrawCurrency("dollar");
+            setWithdrawAmount("");
+            setWithdrawAddress("");
+            setWithdrawNetwork("");
+            setWithdrawDialog(true);
           }}
         >
           <span className="flex items-center text-xs">
@@ -606,7 +665,13 @@ const WalletScreen = () => {
         <Button
           variant="outline"
           className="rounded-xl h-12 w-full"
-          onClick={() => handleCurrencySelect("withdraw", "dollar")}
+          onClick={() => {
+            setWithdrawCurrency("dollar");
+            setWithdrawAmount("");
+            setWithdrawAddress("");
+            setWithdrawNetwork("");
+            setWithdrawDialog(true);
+          }}
         >
           <ArrowUpRight className="h-4 w-4 mr-2" /> Withdraw
         </Button>
@@ -705,6 +770,97 @@ const WalletScreen = () => {
           })}
         </div>
       </div>
+
+      {/* Withdrawal Dialog with Crypto Address */}
+      <AnimatePresence>
+        {withdrawDialog && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 bg-black/60"
+              onClick={() => setWithdrawDialog(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="fixed left-4 right-4 top-1/2 -translate-y-1/2 z-50 bg-card border border-border rounded-2xl p-5 shadow-xl space-y-4"
+            >
+              <div className="flex items-center justify-between">
+                <h3 className="font-bold text-lg text-foreground">
+                  Withdraw {withdrawCurrency === "dollar" ? "$" : "⭐"}
+                </h3>
+                <button onClick={() => setWithdrawDialog(false)} className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
+                  <ArrowUpRight className="h-4 w-4 text-muted-foreground rotate-45" />
+                </button>
+              </div>
+
+              <p className="text-xs text-muted-foreground">
+                Available: {withdrawCurrency === "dollar" ? `$${dollarWinnings.toFixed(2)}` : `${starWinnings} ⭐`} (from winnings)
+              </p>
+
+              {/* Currency toggle */}
+              <div className="flex gap-2">
+                {(["dollar", "star"] as const).map(c => (
+                  <button
+                    key={c}
+                    onClick={() => setWithdrawCurrency(c)}
+                    className={`flex-1 py-2 rounded-xl text-xs font-bold border transition-colors ${
+                      withdrawCurrency === c
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border bg-muted/30 text-muted-foreground"
+                    }`}
+                  >
+                    {c === "dollar" ? "$ Dollar" : "⭐ Star"}
+                  </button>
+                ))}
+              </div>
+
+              {/* Amount */}
+              <Input
+                type="number"
+                placeholder="Enter amount"
+                value={withdrawAmount}
+                onChange={e => setWithdrawAmount(e.target.value)}
+                className="rounded-xl bg-muted/30"
+                min="1"
+              />
+
+              {/* Crypto Address */}
+              <Input
+                type="text"
+                placeholder="Your crypto wallet address"
+                value={withdrawAddress}
+                onChange={e => setWithdrawAddress(e.target.value)}
+                className="rounded-xl bg-muted/30 font-mono text-xs"
+              />
+
+              {/* Network (optional) */}
+              <Input
+                type="text"
+                placeholder="Network (e.g. TRC20, TON, SOL) - optional"
+                value={withdrawNetwork}
+                onChange={e => setWithdrawNetwork(e.target.value)}
+                className="rounded-xl bg-muted/30 text-xs"
+              />
+
+              <Button
+                onClick={handleWithdrawSubmit}
+                disabled={withdrawing || !withdrawAmount || !withdrawAddress}
+                className="w-full rounded-xl h-12 font-bold"
+              >
+                {withdrawing ? "Submitting..." : `Submit Withdrawal Request`}
+              </Button>
+
+              <p className="text-[10px] text-muted-foreground text-center">
+                ⏳ Admin will review and approve your request. You'll get a Telegram notification.
+              </p>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* Amount Input Dialog */}
       <AmountInputDialog

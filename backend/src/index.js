@@ -110,14 +110,17 @@ app.post("/api/deposit", async (req, res) => {
 
 // ============================================
 // POST /api/withdraw
-// Process withdrawal request
+// Creates a PENDING withdrawal request (admin must approve)
 // ============================================
 app.post("/api/withdraw", async (req, res) => {
   try {
-    const { userId, currency, amount } = req.body;
+    const { userId, currency, amount, cryptoAddress, network } = req.body;
 
     if (!userId || !currency || !amount) {
       return res.status(400).json({ error: "Missing userId, currency, or amount" });
+    }
+    if (!cryptoAddress) {
+      return res.status(400).json({ error: "Crypto wallet address is required" });
     }
 
     const user = await getOrCreateUser(userId);
@@ -128,32 +131,120 @@ app.post("/api/withdraw", async (req, res) => {
       return res.status(400).json({ error: "Insufficient winning balance. Withdrawals are only allowed from winnings." });
     }
 
-    // Deduct from winning
+    // Hold the amount (deduct from winning immediately to prevent double-spend)
     user[winningField] -= amount;
     await user.save();
 
-    // Log transaction
+    // Create PENDING transaction
     await Transaction.create({
       telegramId: userId,
       type: "withdraw",
       currency,
       amount: -amount,
-      status: "completed",
-      description: `Withdrawal of ${currency === "dollar" ? "$" + amount : amount + " Stars"}`,
+      status: "pending",
+      cryptoAddress,
+      withdrawalNetwork: network || "",
+      description: `Withdrawal of ${currency === "dollar" ? "$" + amount : amount + " Stars"} to ${cryptoAddress}`,
     });
-
-    // TODO: Actually send funds to user
-    // For Stars: use bot.refundStarPayment() or manual transfer
-    // For Dollars: use Stripe payout or similar
 
     return res.json({
       success: true,
-      newWinningBalance: user[winningField],
-      message: `Withdrawal of ${amount} ${currency} from winnings processed`,
+      message: `Withdrawal request of ${amount} ${currency} submitted. Admin will review and process it.`,
     });
   } catch (error) {
     console.error("Withdraw error:", error);
     return res.status(500).json({ error: "Withdrawal failed" });
+  }
+});
+
+// ============================================
+// POST /api/admin/approve-withdrawal - Admin approves withdrawal
+// ============================================
+app.post("/api/admin/approve-withdrawal", async (req, res) => {
+  try {
+    const { ownerId, transactionId } = req.body;
+    if (String(ownerId) !== "6965488457") {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
+
+    const tx = await Transaction.findById(transactionId);
+    if (!tx || tx.type !== "withdraw" || tx.status !== "pending") {
+      return res.status(404).json({ error: "Pending withdrawal not found" });
+    }
+
+    tx.status = "completed";
+    await tx.save();
+
+    // Send Telegram notification to user
+    try {
+      const amount = Math.abs(tx.amount);
+      const symbol = tx.currency === "dollar" ? "$" : "⭐";
+      await bot.sendMessage(tx.telegramId, 
+        `✅ *Withdrawal Approved!*\n\n` +
+        `💰 Amount: ${symbol}${amount}\n` +
+        `📍 Address: \`${tx.cryptoAddress}\`\n` +
+        `🔗 Network: ${tx.withdrawalNetwork || "N/A"}\n\n` +
+        `Your funds will be sent shortly!`,
+        { parse_mode: "Markdown" }
+      );
+    } catch (botErr) {
+      console.error("Failed to send approval notification:", botErr.message);
+    }
+
+    return res.json({ success: true, message: "Withdrawal approved and user notified" });
+  } catch (error) {
+    console.error("Approve withdrawal error:", error);
+    return res.status(500).json({ error: "Failed to approve withdrawal" });
+  }
+});
+
+// ============================================
+// POST /api/admin/reject-withdrawal - Admin rejects withdrawal
+// ============================================
+app.post("/api/admin/reject-withdrawal", async (req, res) => {
+  try {
+    const { ownerId, transactionId, reason } = req.body;
+    if (String(ownerId) !== "6965488457") {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
+
+    const tx = await Transaction.findById(transactionId);
+    if (!tx || tx.type !== "withdraw" || tx.status !== "pending") {
+      return res.status(404).json({ error: "Pending withdrawal not found" });
+    }
+
+    // Refund amount back to user's winning
+    const user = await User.findOne({ telegramId: tx.telegramId });
+    if (user) {
+      const winningField = tx.currency === "dollar" ? "dollarWinning" : "starWinning";
+      user[winningField] = (user[winningField] || 0) + Math.abs(tx.amount);
+      await user.save();
+    }
+
+    tx.status = "failed";
+    tx.description = `${tx.description} | Rejected: ${reason || "No reason"}`;
+    await tx.save();
+
+    // Send Telegram notification to user
+    try {
+      const amount = Math.abs(tx.amount);
+      const symbol = tx.currency === "dollar" ? "$" : "⭐";
+      await bot.sendMessage(tx.telegramId,
+        `❌ *Withdrawal Rejected*\n\n` +
+        `💰 Amount: ${symbol}${amount}\n` +
+        `📍 Address: \`${tx.cryptoAddress}\`\n` +
+        `${reason ? `📝 Reason: ${reason}\n` : ""}\n` +
+        `Your funds have been returned to your winning balance.`,
+        { parse_mode: "Markdown" }
+      );
+    } catch (botErr) {
+      console.error("Failed to send rejection notification:", botErr.message);
+    }
+
+    return res.json({ success: true, message: "Withdrawal rejected and funds returned" });
+  } catch (error) {
+    console.error("Reject withdrawal error:", error);
+    return res.status(500).json({ error: "Failed to reject withdrawal" });
   }
 });
 
@@ -363,7 +454,7 @@ app.post("/api/admin/users", async (req, res) => {
 
     const users = await User.find({}).sort({ createdAt: -1 }).lean();
 
-    // Get pending withdrawal requests
+    // Get pending withdrawal requests (include _id for approve/reject)
     const withdrawals = await Transaction.find({ type: "withdraw", status: "pending" })
       .sort({ createdAt: -1 })
       .lean();
