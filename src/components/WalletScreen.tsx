@@ -87,7 +87,17 @@ const WalletScreen = () => {
   const [withdrawAddress, setWithdrawAddress] = useState("");
   const [withdrawNetwork, setWithdrawNetwork] = useState("");
   const [withdrawCurrency, setWithdrawCurrency] = useState<CurrencyType>("dollar");
+  const [withdrawCrypto, setWithdrawCrypto] = useState("btc");
   const [withdrawing, setWithdrawing] = useState(false);
+
+  const withdrawCryptoOptions = [
+    { id: "btc", label: "BTC", network: "Bitcoin" },
+    { id: "ltc", label: "LTC", network: "Litecoin" },
+    { id: "ton", label: "TON", network: "TON" },
+    { id: "sol", label: "SOL", network: "Solana" },
+    { id: "trx", label: "TRX", network: "TRC20" },
+    { id: "doge", label: "DOGE", network: "Dogecoin" },
+  ];
 
   // Converter state
   const [convertStars, setConvertStars] = useState("");
@@ -376,8 +386,8 @@ const WalletScreen = () => {
   // Withdrawal submit handler (pending request with crypto address)
   const handleWithdrawSubmit = async () => {
     const amt = parseFloat(withdrawAmount);
-    if (!amt || amt <= 0) {
-      toast({ title: "Invalid amount", variant: "destructive" });
+    if (!amt || amt < 10) {
+      toast({ title: "Minimum $10", description: "Minimum withdrawal amount is $10.", variant: "destructive" });
       return;
     }
     if (!withdrawAddress.trim()) {
@@ -636,7 +646,8 @@ const WalletScreen = () => {
             setWithdrawCurrency("dollar");
             setWithdrawAmount("");
             setWithdrawAddress("");
-            setWithdrawNetwork("");
+            setWithdrawCrypto("btc");
+            setWithdrawNetwork("Bitcoin");
             setWithdrawDialog(true);
           }}
         >
@@ -669,7 +680,8 @@ const WalletScreen = () => {
             setWithdrawCurrency("dollar");
             setWithdrawAmount("");
             setWithdrawAddress("");
-            setWithdrawNetwork("");
+            setWithdrawCrypto("btc");
+            setWithdrawNetwork("Bitcoin");
             setWithdrawDialog(true);
           }}
         >
@@ -806,40 +818,52 @@ const WalletScreen = () => {
                 </div>
 
                 <p className="text-xs text-muted-foreground">
-                  Available: ${dollarWinnings.toFixed(2)} (from winnings)
+                  Available: ${dollarWinnings.toFixed(2)} (from winnings) • Min $10
                 </p>
 
-                <Input
-                  type="number"
-                  placeholder="Enter amount"
-                  value={withdrawAmount}
-                  onChange={e => setWithdrawAmount(e.target.value)}
-                  className="rounded-xl bg-muted/30"
-                  min="1"
-                />
+                {/* Crypto selector */}
+                <div className="grid grid-cols-4 gap-2">
+                  {withdrawCryptoOptions.map(c => (
+                    <button
+                      key={c.id}
+                      onClick={() => {
+                        setWithdrawCrypto(c.id);
+                        setWithdrawNetwork(c.network);
+                      }}
+                      className={`py-2 rounded-xl text-xs font-bold border transition-colors ${
+                        withdrawCrypto === c.id
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border bg-muted/30 text-muted-foreground"
+                      }`}
+                    >
+                      {c.label}
+                    </button>
+                  ))}
+                </div>
 
                 <Input
                   type="text"
-                  placeholder="Your crypto wallet address"
+                  placeholder={`Your ${withdrawCryptoOptions.find(c => c.id === withdrawCrypto)?.label || ''} address`}
                   value={withdrawAddress}
                   onChange={e => setWithdrawAddress(e.target.value)}
                   className="rounded-xl bg-muted/30 font-mono text-xs"
                 />
 
                 <Input
-                  type="text"
-                  placeholder="Network (e.g. TRC20, TON, SOL) - optional"
-                  value={withdrawNetwork}
-                  onChange={e => setWithdrawNetwork(e.target.value)}
-                  className="rounded-xl bg-muted/30 text-xs"
+                  type="number"
+                  placeholder="Amount (min $10)"
+                  value={withdrawAmount}
+                  onChange={e => setWithdrawAmount(e.target.value)}
+                  className="rounded-xl bg-muted/30"
+                  min="10"
                 />
 
                 <Button
                   onClick={handleWithdrawSubmit}
-                  disabled={withdrawing || !withdrawAmount || !withdrawAddress || !withdrawNetwork.trim()}
+                  disabled={withdrawing || !withdrawAmount || !withdrawAddress.trim() || parseFloat(withdrawAmount) < 10}
                   className="w-full rounded-xl h-12 font-bold"
                 >
-                  {withdrawing ? "Submitting..." : `Submit Withdrawal Request`}
+                  {withdrawing ? "Submitting..." : `Withdraw via ${withdrawCryptoOptions.find(c => c.id === withdrawCrypto)?.label || ''}`}
                 </Button>
 
                 <p className="text-[10px] text-muted-foreground text-center">
