@@ -115,7 +115,7 @@ const DiceMasterGame = () => {
       }
       // Report result to backend
       reportGameResult({ betAmount: selectedBet, winAmount: prize, currency: activeWallet, game: "dice-master" })
-        .then(() => refreshBalance()).catch(console.error);
+        .then(() => { setLocalDollarAdj(0); setLocalStarAdj(0); refreshBalance(); }).catch(console.error);
 
       setPhase("result");
       setResultTimer(3);
