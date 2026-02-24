@@ -17,6 +17,7 @@ interface TelegramWebApp {
       last_name?: string;
       username?: string;
     };
+    start_param?: string;
   };
   ready: () => void;
   close: () => void;
@@ -218,4 +219,38 @@ export const reportGameResult = async (data: {
   }
 
   return res.json();
+};
+
+/**
+ * Process referral if user opened app via invite link
+ */
+export const processReferral = async (): Promise<void> => {
+  const tg = getTelegram();
+  if (!tg) return;
+
+  const userId = tg.initDataUnsafe?.user?.id;
+  const startParam = tg.initDataUnsafe?.start_param;
+
+  if (!userId || !startParam || !startParam.startsWith("ref_")) return;
+
+  const referrerId = startParam.replace("ref_", "");
+  if (!referrerId || referrerId === String(userId)) return;
+
+  // Check if already processed this session
+  const key = `referral_processed_${userId}`;
+  if (sessionStorage.getItem(key)) return;
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/referral`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId, referrerId }),
+    });
+
+    const data = await res.json();
+    sessionStorage.setItem(key, "true");
+    console.log("Referral result:", data);
+  } catch (err) {
+    console.error("Referral processing error:", err);
+  }
 };
