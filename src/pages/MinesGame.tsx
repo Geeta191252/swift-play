@@ -92,7 +92,7 @@ const MinesGame = () => {
       setRound(r => r + 1);
       // Report loss to backend
       reportGameResult({ betAmount: selectedBet, winAmount: 0, currency: activeWallet, game: "mines" })
-        .then(() => refreshBalance()).catch(console.error);
+        .then(() => { setLocalDollarAdj(0); setLocalStarAdj(0); refreshBalance(); }).catch(console.error);
     } else {
       // Safe pick
       newGrid[index] = "safe";
@@ -114,7 +114,7 @@ const MinesGame = () => {
         setRound(r => r + 1);
         // Report win to backend
         reportGameResult({ betAmount: selectedBet, winAmount: prize, currency: activeWallet, game: "mines" })
-          .then(() => refreshBalance()).catch(console.error);
+          .then(() => { setLocalDollarAdj(0); setLocalStarAdj(0); refreshBalance(); }).catch(console.error);
       }
     }
   }, [phase, grid, minePositions, safePicks, mineCount, selectedBet, activeWallet]);
@@ -136,7 +136,7 @@ const MinesGame = () => {
     setRound(r => r + 1);
     // Report cashout win to backend
     reportGameResult({ betAmount: selectedBet, winAmount: prize, currency: activeWallet, game: "mines" })
-      .then(() => refreshBalance()).catch(console.error);
+      .then(() => { setLocalDollarAdj(0); setLocalStarAdj(0); refreshBalance(); }).catch(console.error);
   }, [phase, safePicks, selectedBet, currentMultiplier, activeWallet, grid, minePositions, refreshBalance]);
 
   const nextMultiplier = phase === "playing" ? getMultiplier(safePicks + 1, mineCount) : 1;

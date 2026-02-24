@@ -182,7 +182,7 @@ const GreedyKingGame = () => {
           if (soundRef.current) playWinSound();
           // Report win to backend
           reportGameResult({ betAmount: totalBet, winAmount: amount, currency: activeWallet, game: "greedy-king" })
-            .then(() => refreshBalance()).catch(console.error);
+            .then(() => { setLocalDollarAdj(0); setLocalStarAdj(0); refreshBalance(); }).catch(console.error);
         } else {
           setWinAmount(0);
           setTotalLost(totalBet);
@@ -190,7 +190,7 @@ const GreedyKingGame = () => {
           if (soundRef.current) playLoseSound();
           // Report loss to backend
           reportGameResult({ betAmount: totalBet, winAmount: 0, currency: activeWallet, game: "greedy-king" })
-            .then(() => refreshBalance()).catch(console.error);
+            .then(() => { setLocalDollarAdj(0); setLocalStarAdj(0); refreshBalance(); }).catch(console.error);
         }
       } else {
         setWinAmount(0);
