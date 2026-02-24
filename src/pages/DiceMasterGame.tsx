@@ -7,10 +7,10 @@ import { useBalanceContext } from "@/contexts/BalanceContext";
 import { reportGameResult, type CurrencyType } from "@/lib/telegram";
 
 const DICE_FACES = [
-  { value: 1, dots: "⚀", multiplier: 5 },
-  { value: 2, dots: "⚁", multiplier: 3 },
-  { value: 3, dots: "⚂", multiplier: 3 },
-  { value: 4, dots: "⚃", multiplier: 3 },
+  { value: 1, dots: "⚀", multiplier: 0 },
+  { value: 2, dots: "⚁", multiplier: 0.5 },
+  { value: 3, dots: "⚂", multiplier: 1.5 },
+  { value: 4, dots: "⚃", multiplier: 2 },
   { value: 5, dots: "⚄", multiplier: 5 },
   { value: 6, dots: "⚅", multiplier: 10 },
 ];
@@ -76,18 +76,26 @@ const DiceMasterGame = () => {
     setTimeout(() => {
       if (rollIntervalRef.current) clearInterval(rollIntervalRef.current);
 
-      // Rigged: make it hard to win - pick dice that don't match user's choice
-      const otherValues = [1, 2, 3, 4, 5, 6].filter(v => v !== selectedDice);
-      const shouldWin = Math.random() < 0.25; // 25% chance
-      let d1: number, d2: number;
-
-      if (shouldWin && selectedDice !== null) {
-        d1 = selectedDice;
-        d2 = Math.floor(Math.random() * 6) + 1;
-      } else {
-        d1 = otherValues[Math.floor(Math.random() * otherValues.length)];
-        d2 = otherValues[Math.floor(Math.random() * otherValues.length)];
-      }
+      // Weighted dice: 0x (1) most common, 0.5x (2) common, 1.5x (3) rare, 2x+ almost never
+      const weightedValues = [
+        { value: 1, weight: 50 },  // 0x - ~60%
+        { value: 2, weight: 22 },  // 0.5x - ~26%
+        { value: 3, weight: 8 },   // 1.5x - ~10%
+        { value: 4, weight: 2 },   // 2x - ~2.5%
+        { value: 5, weight: 0.5 }, // 5x - ~0.6%
+        { value: 6, weight: 0.1 }, // 10x - ~0.1%
+      ];
+      const totalWeight = weightedValues.reduce((s, w) => s + w.weight, 0);
+      const pickWeighted = () => {
+        let r = Math.random() * totalWeight;
+        for (const w of weightedValues) {
+          r -= w.weight;
+          if (r <= 0) return w.value;
+        }
+        return 1;
+      };
+      const d1 = pickWeighted();
+      const d2 = pickWeighted();
 
       setResultDice([d1, d2]);
       setRollingDice([d1, d2]);
@@ -97,17 +105,21 @@ const DiceMasterGame = () => {
       setResults(prev => [sum, ...prev].slice(0, 12));
       setRound(r => r + 1);
 
-      // Check win: if either die matches selected
-      const won = d1 === selectedDice || d2 === selectedDice;
+      const matchedDie = d1 === selectedDice ? d1 : d2 === selectedDice ? d2 : null;
       let prize = 0;
-      if (won) {
-        const mult = DICE_FACES.find(f => f.value === selectedDice)!.multiplier;
+      if (matchedDie !== null) {
+        const mult = DICE_FACES.find(f => f.value === matchedDie)!.multiplier;
         prize = selectedBet * mult;
-        setWinAmount(prize);
-        setTotalLost(0);
-        // Win goes to winning pool, not wallet
-
-        if (soundRef.current) playWinSound();
+        if (prize > 0) {
+          setWinAmount(prize);
+          setTotalLost(0);
+          if (soundRef.current) playWinSound();
+        } else {
+          // 0x multiplier = loss even on match
+          setWinAmount(0);
+          setTotalLost(selectedBet);
+          if (soundRef.current) playLoseSound();
+        }
       } else {
         setWinAmount(0);
         setTotalLost(selectedBet);
