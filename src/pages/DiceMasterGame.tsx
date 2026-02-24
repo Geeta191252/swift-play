@@ -105,16 +105,14 @@ const DiceMasterGame = () => {
       setResults(prev => [chosenMult, ...prev].slice(0, 12));
       setRound(r2 => r2 + 1);
 
-      const prize = selectedBet * chosenMult;
-      if (prize > selectedBet) {
-        // Actual win (1.5x+)
+      const prize = Math.round(selectedBet * chosenMult * 100) / 100;
+      if (chosenMult > 0) {
         setWinAmount(prize);
         setTotalLost(0);
-        if (soundRef.current) playWinSound();
+        if (prize > 0 && soundRef.current) playWinSound();
       } else {
-        // Loss (0x, 0.5x) or break-even
-        setWinAmount(prize > 0 ? prize : 0);
-        setTotalLost(prize > 0 ? selectedBet - prize : selectedBet);
+        setWinAmount(0);
+        setTotalLost(selectedBet);
         if (soundRef.current) playLoseSound();
       }
       // Report result to backend
@@ -233,11 +231,11 @@ const DiceMasterGame = () => {
         {phase === "result" && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="text-center mb-4">
             {winAmount > 0 ? (
-              <p className="text-xl font-bold" style={{ color: "hsl(50, 90%, 65%)" }}>🎉 Won {winAmount.toFixed(2)}! ({(winAmount / selectedBet).toFixed(1)}x)</p>
+              <p className="text-xl font-bold" style={{ color: "hsl(50, 90%, 65%)" }}>🎉 {(winAmount / selectedBet).toFixed(1)}X — Won {winAmount}!</p>
             ) : (
-              <p className="text-xl font-bold" style={{ color: "hsl(0, 70%, 65%)" }}>😔 Lost {totalLost.toFixed(2)}</p>
+              <p className="text-xl font-bold" style={{ color: "hsl(0, 70%, 65%)" }}>💨 0X — Lost {totalLost}</p>
             )}
-            <p className="text-xs mt-1" style={{ color: "hsl(0, 0%, 70%)" }}>Next round in {resultTimer}s</p>
+            <p className="text-xs mt-1" style={{ color: "hsl(0, 0%, 70%)" }}>Next spin in {resultTimer}s</p>
           </motion.div>
         )}
       </AnimatePresence>
