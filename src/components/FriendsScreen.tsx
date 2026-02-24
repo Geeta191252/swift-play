@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 import { Copy, Send } from "lucide-react";
 import { Button } from "./ui/button";
 import { toast } from "@/hooks/use-toast";
-import { getTelegramUser } from "@/lib/telegram";
+import { getTelegramUser, getTelegram } from "@/lib/telegram";
 
 const inviteTasks = [
   { title: "Invite 1st friend", reward: "2", icon: "⭐" },
@@ -47,7 +47,12 @@ const FriendsScreen = () => {
           className="w-full rounded-2xl h-12 text-base font-extrabold uppercase tracking-wide bg-yellow-400 hover:bg-yellow-500 text-black border-2 border-yellow-500"
           onClick={() => {
             const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(referralLink)}&text=${encodeURIComponent("🎮 Royal King Game khelo aur stars kamao! Join karo mere referral link se!")}`;
-            window.open(shareUrl, "_blank");
+            const tg = getTelegram();
+            if (tg?.openTelegramLink) {
+              tg.openTelegramLink(shareUrl);
+            } else {
+              window.open(shareUrl, "_blank");
+            }
           }}
         >
           <Send className="h-5 w-5 mr-2" /> Invite Friends

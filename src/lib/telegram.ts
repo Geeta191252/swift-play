@@ -22,6 +22,7 @@ interface TelegramWebApp {
   close: () => void;
   expand: () => void;
   openInvoice: (url: string, callback?: (status: string) => void) => void;
+  openTelegramLink: (url: string) => void;
   showAlert: (message: string, callback?: () => void) => void;
   showConfirm: (message: string, callback?: (confirmed: boolean) => void) => void;
   showPopup: (params: {
