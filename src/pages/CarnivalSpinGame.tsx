@@ -117,9 +117,13 @@ const CarnivalSpinGame = () => {
         setTotalLost(selectedBet);
         if (soundRef.current) playLoseSound();
       }
-      // Report result to backend
+      // Report result to backend, then reset local adjustments since backend now has the real balance
       reportGameResult({ betAmount: selectedBet, winAmount: prize, currency: activeWallet, game: "carnival-spin" })
-        .then(() => refreshBalance()).catch(console.error);
+        .then(() => {
+          setLocalDollarAdj(0);
+          setLocalStarAdj(0);
+          refreshBalance();
+        }).catch(console.error);
 
       setPhase("result");
       setResultTimer(3);
