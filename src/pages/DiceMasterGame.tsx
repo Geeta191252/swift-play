@@ -31,7 +31,7 @@ const DiceMasterGame = () => {
   const gameStarBalance = starBalance + starWinning + localStarAdj;
   const [activeWallet, setActiveWallet] = useState<"dollar" | "star">("dollar");
   const [selectedBet, setSelectedBet] = useState(1);
-  const [selectedDice, setSelectedDice] = useState<number | null>(null);
+  
   const [phase, setPhase] = useState<GamePhase>("betting");
   const [rollingDice, setRollingDice] = useState([1, 1]);
   const [resultDice, setResultDice] = useState([1, 1]);
@@ -59,7 +59,7 @@ const DiceMasterGame = () => {
   const currentBalance = activeWallet === "dollar" ? gameDollarBalance : gameStarBalance;
 
   const rollDice = () => {
-    if (phase !== "betting" || selectedDice === null || currentBalance < selectedBet) return;
+    if (phase !== "betting" || currentBalance < selectedBet) return;
 
     // Deduct bet
     if (activeWallet === "dollar") setLocalDollarAdj(p => p - selectedBet);
@@ -105,21 +105,14 @@ const DiceMasterGame = () => {
       setResults(prev => [sum, ...prev].slice(0, 12));
       setRound(r => r + 1);
 
-      const matchedDie = d1 === selectedDice ? d1 : d2 === selectedDice ? d2 : null;
-      let prize = 0;
-      if (matchedDie !== null) {
-        const mult = DICE_FACES.find(f => f.value === matchedDie)!.multiplier;
-        prize = selectedBet * mult;
-        if (prize > 0) {
-          setWinAmount(prize);
-          setTotalLost(0);
-          if (soundRef.current) playWinSound();
-        } else {
-          // 0x multiplier = loss even on match
-          setWinAmount(0);
-          setTotalLost(selectedBet);
-          if (soundRef.current) playLoseSound();
-        }
+      // Use the higher die's multiplier for result
+      const resultValue = Math.max(d1, d2);
+      const mult = DICE_FACES.find(f => f.value === resultValue)!.multiplier;
+      let prize = selectedBet * mult;
+      if (prize > 0) {
+        setWinAmount(prize);
+        setTotalLost(0);
+        if (soundRef.current) playWinSound();
       } else {
         setWinAmount(0);
         setTotalLost(selectedBet);
@@ -136,7 +129,6 @@ const DiceMasterGame = () => {
           if (prev <= 1) {
             if (timerRef.current) clearInterval(timerRef.current);
             setPhase("betting");
-            setSelectedDice(null);
             return 0;
           }
           return prev - 1;
@@ -251,32 +243,18 @@ const DiceMasterGame = () => {
         )}
       </AnimatePresence>
 
-      {/* Pick Your Number */}
-      <div className="px-4">
-        <p className="text-sm font-bold mb-2 text-center" style={{ color: "hsl(0, 0%, 90%)" }}>
-          {phase === "betting" ? "🎯 Pick Your Number" : phase === "rolling" ? "🎲 Rolling..." : ""}
-        </p>
-        <div className="grid grid-cols-6 gap-2 mb-4">
-          {DICE_FACES.map((face) => (
-            <button
-              key={face.value}
-              onClick={() => phase === "betting" && setSelectedDice(face.value)}
-              disabled={phase !== "betting"}
-              className="flex flex-col items-center rounded-xl py-3 border-2 transition-all"
-              style={{
-                borderColor: selectedDice === face.value ? "hsl(45, 90%, 55%)" : "hsla(0, 0%, 100%, 0.15)",
-                background: selectedDice === face.value
-                  ? "linear-gradient(180deg, hsl(45, 80%, 50%), hsl(35, 70%, 40%))"
-                  : "hsla(0, 0%, 100%, 0.08)",
-                transform: selectedDice === face.value ? "scale(1.05)" : "scale(1)",
-              }}
-            >
-              {renderDie(face.value, 36)}
-              <span className="text-[9px] font-bold mt-1" style={{
-                color: selectedDice === face.value ? "hsl(0, 0%, 10%)" : "hsl(0, 0%, 80%)"
-              }}>{face.multiplier}X</span>
-            </button>
-          ))}
+      {/* Multiplier Info */}
+      <div className="px-4 mb-2">
+        <div className="rounded-xl p-3" style={{ background: "hsla(0, 0%, 0%, 0.3)" }}>
+          <p className="text-xs font-bold mb-2 text-center" style={{ color: "hsl(0, 0%, 90%)" }}>🎯 Multipliers</p>
+          <div className="grid grid-cols-6 gap-2">
+            {DICE_FACES.map((face) => (
+              <div key={face.value} className="flex flex-col items-center rounded-lg py-2" style={{ background: "hsla(0, 0%, 100%, 0.08)" }}>
+                {renderDie(face.value, 28)}
+                <span className="text-[9px] font-bold mt-1" style={{ color: "hsl(50, 90%, 65%)" }}>{face.multiplier}X</span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -321,17 +299,17 @@ const DiceMasterGame = () => {
         <motion.button
           whileTap={{ scale: 0.95 }}
           onClick={rollDice}
-          disabled={phase !== "betting" || selectedDice === null || currentBalance < selectedBet}
+          disabled={phase !== "betting" || currentBalance < selectedBet}
           className="w-full py-4 rounded-2xl text-lg font-bold transition-all"
           style={{
-            background: phase === "betting" && selectedDice !== null
+            background: phase === "betting"
               ? "linear-gradient(135deg, hsl(45, 90%, 55%), hsl(35, 85%, 45%))"
               : "hsla(0, 0%, 50%, 0.3)",
-            color: phase === "betting" && selectedDice !== null ? "hsl(0, 0%, 10%)" : "hsl(0, 0%, 60%)",
+            color: phase === "betting" ? "hsl(0, 0%, 10%)" : "hsl(0, 0%, 60%)",
           }}
         >
           {phase === "betting"
-            ? selectedDice === null ? "Select a Number First" : `🎲 Roll Dice - Bet ${activeWallet === "dollar" ? "$" : ""}${selectedBet}${activeWallet === "star" ? " ⭐" : ""}`
+            ? `🎲 Roll Dice - Bet ${activeWallet === "dollar" ? "$" : ""}${selectedBet}${activeWallet === "star" ? " ⭐" : ""}`
             : phase === "rolling" ? "Rolling..." : `Next in ${resultTimer}s`}
         </motion.button>
       </div>
