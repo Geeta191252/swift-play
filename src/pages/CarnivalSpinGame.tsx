@@ -73,12 +73,12 @@ const CarnivalSpinGame = () => {
 
     // Rigged: higher chance of landing on 0X or low multipliers
     const weights = SEGMENTS.map(s => {
-      if (s.multiplier === 0) return 30;
-      if (s.multiplier <= 1.5) return 20;
-      if (s.multiplier <= 2) return 15;
-      if (s.multiplier <= 3) return 8;
-      if (s.multiplier <= 5) return 4;
-      return 1;
+      if (s.multiplier === 0) return 50;
+      if (s.multiplier === 0.5) return 20;
+      if (s.multiplier <= 1.5) return 8;
+      if (s.multiplier <= 2) return 3;
+      if (s.multiplier <= 3) return 1;
+      return 0.1;
     });
     const totalWeight = weights.reduce((a, b) => a + b, 0);
     let r = Math.random() * totalWeight;
