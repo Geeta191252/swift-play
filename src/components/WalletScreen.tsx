@@ -783,80 +783,86 @@ const WalletScreen = () => {
               onClick={() => setWithdrawDialog(false)}
             />
             <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="fixed left-4 right-4 top-1/2 -translate-y-1/2 z-50 bg-card border border-border rounded-2xl p-5 shadow-xl space-y-4"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4"
+              onClick={() => setWithdrawDialog(false)}
             >
-              <div className="flex items-center justify-between">
-                <h3 className="font-bold text-lg text-foreground">
-                  Withdraw {withdrawCurrency === "dollar" ? "$" : "⭐"}
-                </h3>
-                <button onClick={() => setWithdrawDialog(false)} className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
-                  <ArrowUpRight className="h-4 w-4 text-muted-foreground rotate-45" />
-                </button>
-              </div>
-
-              <p className="text-xs text-muted-foreground">
-                Available: {withdrawCurrency === "dollar" ? `$${dollarWinnings.toFixed(2)}` : `${starWinnings} ⭐`} (from winnings)
-              </p>
-
-              {/* Currency toggle */}
-              <div className="flex gap-2">
-                {(["dollar", "star"] as const).map(c => (
-                  <button
-                    key={c}
-                    onClick={() => setWithdrawCurrency(c)}
-                    className={`flex-1 py-2 rounded-xl text-xs font-bold border transition-colors ${
-                      withdrawCurrency === c
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-border bg-muted/30 text-muted-foreground"
-                    }`}
-                  >
-                    {c === "dollar" ? "$ Dollar" : "⭐ Star"}
-                  </button>
-                ))}
-              </div>
-
-              {/* Amount */}
-              <Input
-                type="number"
-                placeholder="Enter amount"
-                value={withdrawAmount}
-                onChange={e => setWithdrawAmount(e.target.value)}
-                className="rounded-xl bg-muted/30"
-                min="1"
-              />
-
-              {/* Crypto Address */}
-              <Input
-                type="text"
-                placeholder="Your crypto wallet address"
-                value={withdrawAddress}
-                onChange={e => setWithdrawAddress(e.target.value)}
-                className="rounded-xl bg-muted/30 font-mono text-xs"
-              />
-
-              {/* Network (optional) */}
-              <Input
-                type="text"
-                placeholder="Network (e.g. TRC20, TON, SOL) - optional"
-                value={withdrawNetwork}
-                onChange={e => setWithdrawNetwork(e.target.value)}
-                className="rounded-xl bg-muted/30 text-xs"
-              />
-
-              <Button
-                onClick={handleWithdrawSubmit}
-                disabled={withdrawing || !withdrawAmount || !withdrawAddress || !withdrawNetwork.trim()}
-                className="w-full rounded-xl h-12 font-bold"
+              <motion.div
+                initial={{ scale: 0.9, y: 20 }}
+                animate={{ scale: 1, y: 0 }}
+                exit={{ scale: 0.9, y: 20 }}
+                className="bg-card border border-border rounded-2xl p-5 shadow-xl space-y-4 w-full max-h-[85vh] overflow-y-auto"
+                onClick={e => e.stopPropagation()}
               >
-                {withdrawing ? "Submitting..." : `Submit Withdrawal Request`}
-              </Button>
+                <div className="flex items-center justify-between">
+                  <h3 className="font-bold text-lg text-foreground">
+                    Withdraw {withdrawCurrency === "dollar" ? "$" : "⭐"}
+                  </h3>
+                  <button onClick={() => setWithdrawDialog(false)} className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
+                    <ArrowUpRight className="h-4 w-4 text-muted-foreground rotate-45" />
+                  </button>
+                </div>
 
-              <p className="text-[10px] text-muted-foreground text-center">
-                ⏳ Admin will review and approve your request. You'll get a Telegram notification.
-              </p>
+                <p className="text-xs text-muted-foreground">
+                  Available: {withdrawCurrency === "dollar" ? `$${dollarWinnings.toFixed(2)}` : `${starWinnings} ⭐`} (from winnings)
+                </p>
+
+                {/* Currency toggle */}
+                <div className="flex gap-2">
+                  {(["dollar", "star"] as const).map(c => (
+                    <button
+                      key={c}
+                      onClick={() => setWithdrawCurrency(c)}
+                      className={`flex-1 py-2 rounded-xl text-xs font-bold border transition-colors ${
+                        withdrawCurrency === c
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border bg-muted/30 text-muted-foreground"
+                      }`}
+                    >
+                      {c === "dollar" ? "$ Dollar" : "⭐ Star"}
+                    </button>
+                  ))}
+                </div>
+
+                <Input
+                  type="number"
+                  placeholder="Enter amount"
+                  value={withdrawAmount}
+                  onChange={e => setWithdrawAmount(e.target.value)}
+                  className="rounded-xl bg-muted/30"
+                  min="1"
+                />
+
+                <Input
+                  type="text"
+                  placeholder="Your crypto wallet address"
+                  value={withdrawAddress}
+                  onChange={e => setWithdrawAddress(e.target.value)}
+                  className="rounded-xl bg-muted/30 font-mono text-xs"
+                />
+
+                <Input
+                  type="text"
+                  placeholder="Network (e.g. TRC20, TON, SOL) - optional"
+                  value={withdrawNetwork}
+                  onChange={e => setWithdrawNetwork(e.target.value)}
+                  className="rounded-xl bg-muted/30 text-xs"
+                />
+
+                <Button
+                  onClick={handleWithdrawSubmit}
+                  disabled={withdrawing || !withdrawAmount || !withdrawAddress || !withdrawNetwork.trim()}
+                  className="w-full rounded-xl h-12 font-bold"
+                >
+                  {withdrawing ? "Submitting..." : `Submit Withdrawal Request`}
+                </Button>
+
+                <p className="text-[10px] text-muted-foreground text-center">
+                  ⏳ Admin will review and approve your request. You'll get a Telegram notification.
+                </p>
+              </motion.div>
             </motion.div>
           </>
         )}
