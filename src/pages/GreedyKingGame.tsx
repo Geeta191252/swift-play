@@ -177,11 +177,7 @@ const GreedyKingGame = () => {
           const netProfit = amount - lostOnOthers;
           setWinAmount(amount);
           setTotalLost(lostOnOthers);
-          if (activeWallet === "dollar") {
-            setLocalDollarAdj(g => g + amount);
-          } else {
-            setLocalStarAdj(g => g + amount);
-          }
+          // Win goes to winning pool, not wallet
           setTodayProfits(p => p + netProfit);
           if (soundRef.current) playWinSound();
           // Report win to backend

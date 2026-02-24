@@ -5,6 +5,8 @@ import { useQueryClient } from "@tanstack/react-query";
 interface BalanceContextType {
   dollarBalance: number;
   starBalance: number;
+  dollarWinning: number;
+  starWinning: number;
   isLoading: boolean;
   refreshBalance: () => void;
 }
@@ -12,6 +14,8 @@ interface BalanceContextType {
 const BalanceContext = createContext<BalanceContextType>({
   dollarBalance: 0,
   starBalance: 0,
+  dollarWinning: 0,
+  starWinning: 0,
   isLoading: false,
   refreshBalance: () => {},
 });
@@ -29,6 +33,8 @@ export const BalanceProvider = ({ children }: { children: React.ReactNode }) => 
       value={{
         dollarBalance: data?.dollarBalance ?? 0,
         starBalance: data?.starBalance ?? 0,
+        dollarWinning: data?.dollarWinning ?? 0,
+        starWinning: data?.starWinning ?? 0,
         isLoading,
         refreshBalance,
       }}

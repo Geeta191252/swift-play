@@ -105,8 +105,8 @@ const DiceMasterGame = () => {
         prize = selectedBet * mult;
         setWinAmount(prize);
         setTotalLost(0);
-        if (activeWallet === "dollar") setLocalDollarAdj(p => p + prize);
-        else setLocalStarAdj(p => p + prize);
+        // Win goes to winning pool, not wallet
+
         if (soundRef.current) playWinSound();
       } else {
         setWinAmount(0);

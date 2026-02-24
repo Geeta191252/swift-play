@@ -18,6 +18,16 @@ const userSchema = new mongoose.Schema(
       default: 0,
       min: 0,
     },
+    dollarWinning: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    starWinning: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
     username: String,
     firstName: String,
     lastName: String,
