@@ -7,7 +7,7 @@ import { getTelegramUser } from "@/lib/telegram";
 
 declare global {
   interface Window {
-    show_10648653?: (options?: { type?: string; ymid?: string }) => Promise<void>;
+    show_10648653?: () => Promise<void>;
   }
 }
 
@@ -40,38 +40,32 @@ const EarnScreen = () => {
   const [adReady, setAdReady] = useState(false);
   const { refreshBalance } = useBalanceContext();
 
-  // Preload ads using Monetag's official preload API
+  // Check if Monetag script has loaded the show function
   useEffect(() => {
     let cancelled = false;
-    const preloadAd = () => {
-      if (window.show_10648653) {
-        window.show_10648653({ type: 'preload' } as any)
-          .then(() => {
-            if (!cancelled) setAdReady(true);
-          })
-          .catch(() => {
-            // Preload failed, retry after delay
-            if (!cancelled) setTimeout(preloadAd, 3000);
-          });
+    const checkReady = () => {
+      if (cancelled) return;
+      if (typeof window.show_10648653 === "function") {
+        setAdReady(true);
       } else {
-        // Script not loaded yet, retry
-        if (!cancelled) setTimeout(preloadAd, 1000);
+        setTimeout(checkReady, 1500);
       }
     };
-    preloadAd();
+    checkReady();
     return () => { cancelled = true; };
   }, []);
 
   const handleWatchAd = async () => {
     if (loading) return;
 
-    if (!window.show_10648653) {
-      toast.error("Ad loading... please wait a few seconds ⏳");
+    if (typeof window.show_10648653 !== "function") {
+      toast.error("Ad not loaded yet. Please wait a moment and try again ⏳");
       return;
     }
 
     setLoading(true);
     try {
+      // Monetag Rewarded Interstitial — returns a promise that resolves when ad is watched
       await window.show_10648653();
       // Ad watched successfully — credit 1 star
       const newCount = adsWatched + 1;
