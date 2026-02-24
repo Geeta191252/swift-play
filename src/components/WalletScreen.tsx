@@ -798,7 +798,7 @@ const WalletScreen = () => {
               >
                 <div className="flex items-center justify-between">
                   <h3 className="font-bold text-lg text-foreground">
-                    Withdraw {withdrawCurrency === "dollar" ? "$" : "⭐"}
+                    Withdraw $
                   </h3>
                   <button onClick={() => setWithdrawDialog(false)} className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
                     <ArrowUpRight className="h-4 w-4 text-muted-foreground rotate-45" />
@@ -806,25 +806,8 @@ const WalletScreen = () => {
                 </div>
 
                 <p className="text-xs text-muted-foreground">
-                  Available: {withdrawCurrency === "dollar" ? `$${dollarWinnings.toFixed(2)}` : `${starWinnings} ⭐`} (from winnings)
+                  Available: ${dollarWinnings.toFixed(2)} (from winnings)
                 </p>
-
-                {/* Currency toggle */}
-                <div className="flex gap-2">
-                  {(["dollar", "star"] as const).map(c => (
-                    <button
-                      key={c}
-                      onClick={() => setWithdrawCurrency(c)}
-                      className={`flex-1 py-2 rounded-xl text-xs font-bold border transition-colors ${
-                        withdrawCurrency === c
-                          ? "border-primary bg-primary/10 text-primary"
-                          : "border-border bg-muted/30 text-muted-foreground"
-                      }`}
-                    >
-                      {c === "dollar" ? "$ Dollar" : "⭐ Star"}
-                    </button>
-                  ))}
-                </div>
 
                 <Input
                   type="number"
