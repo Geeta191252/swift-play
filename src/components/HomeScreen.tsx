@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronRight, Diamond, Plus, ShoppingCart, User } from "lucide-react";
+import { ChevronRight, Diamond, Plus, ShoppingCart, User, Shield } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useBalanceContext } from "@/contexts/BalanceContext";
+import { getTelegramUser } from "@/lib/telegram";
 import BottomNav from "./BottomNav";
 import EarnScreen from "./EarnScreen";
 import FriendsScreen from "./FriendsScreen";
@@ -60,7 +61,11 @@ const HomeScreen = () => {
   const goToDiceMaster = () => navigate("/dice-master");
   const goToCarnivalSpin = () => navigate("/carnival-spin");
   const goToMines = () => navigate("/mines");
-  
+  const goToAdmin = () => navigate("/admin");
+
+  const telegramUser = getTelegramUser();
+  const isOwner = telegramUser?.id === 6965488457;
+
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -95,6 +100,15 @@ const HomeScreen = () => {
           </div>
         </div>
         <div className="flex items-center gap-3">
+          {isOwner && (
+            <div
+              onClick={goToAdmin}
+              className="h-9 w-9 rounded-xl flex items-center justify-center cursor-pointer"
+              style={{ background: "linear-gradient(135deg, hsl(0 70% 50%), hsl(30 80% 45%))" }}
+            >
+              <Shield className="h-4 w-4" style={{ color: "hsl(0 0% 100%)" }} />
+            </div>
+          )}
           <div className="h-9 w-9 rounded-xl flex items-center justify-center" style={{
             background: "linear-gradient(135deg, hsl(280 60% 55%), hsl(320 50% 45%))",
           }}>
