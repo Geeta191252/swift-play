@@ -848,7 +848,7 @@ const WalletScreen = () => {
 
               <Button
                 onClick={handleWithdrawSubmit}
-                disabled={withdrawing || !withdrawAmount || !withdrawAddress}
+                disabled={withdrawing || !withdrawAmount || !withdrawAddress || !withdrawNetwork.trim()}
                 className="w-full rounded-xl h-12 font-bold"
               >
                 {withdrawing ? "Submitting..." : `Submit Withdrawal Request`}
