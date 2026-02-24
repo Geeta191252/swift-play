@@ -53,7 +53,9 @@ const GameTile = ({ image, name, description, badge, badgeColor = "bg-green-500"
 const HomeScreen = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(0);
-  const { dollarBalance, starBalance } = useBalanceContext();
+  const { dollarBalance, starBalance, dollarWinning, starWinning } = useBalanceContext();
+  const totalDollar = dollarBalance + dollarWinning;
+  const totalStar = starBalance + starWinning;
   const goToGreedyKing = () => navigate("/greedy-king");
   const goToDiceMaster = () => navigate("/dice-master");
   const goToCarnivalSpin = () => navigate("/carnival-spin");
@@ -83,13 +85,13 @@ const HomeScreen = () => {
             background: "linear-gradient(135deg, hsl(45 80% 50%), hsl(35 70% 40%))",
           }}>
             <span className="text-[10px]">💲</span>
-            <span className="font-bold text-[10px]" style={{ color: "hsl(0 0% 10%)" }}>${dollarBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            <span className="font-bold text-[10px]" style={{ color: "hsl(0 0% 10%)" }}>${totalDollar.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
           </div>
           <div className="flex items-center gap-1 rounded-full px-2.5 py-1 shrink-0" style={{
             background: "linear-gradient(135deg, hsl(200 70% 50%), hsl(220 60% 45%))",
           }}>
             <span className="text-[10px]">⭐</span>
-            <span className="font-bold text-[10px]" style={{ color: "hsl(0 0% 100%)" }}>Star {starBalance.toLocaleString()}</span>
+            <span className="font-bold text-[10px]" style={{ color: "hsl(0 0% 100%)" }}>Star {totalStar.toLocaleString()}</span>
           </div>
         </div>
         <div className="flex items-center gap-3">
