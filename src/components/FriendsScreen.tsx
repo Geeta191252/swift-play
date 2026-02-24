@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { Copy, Send } from "lucide-react";
 import { Button } from "./ui/button";
 import { toast } from "@/hooks/use-toast";
+import { getTelegramUser } from "@/lib/telegram";
 
 const inviteTasks = [
   { title: "Invite 1st friend", reward: "2", icon: "⭐" },
@@ -10,7 +11,9 @@ const inviteTasks = [
 ];
 
 const FriendsScreen = () => {
-  const referralLink = "https://t.me/gamee/start?startapp=eyJy...";
+  const user = getTelegramUser();
+  const userId = user?.id || "unknown";
+  const referralLink = `https://t.me/RoyalKingGameBot/RoyalKingGame?startapp=ref_${userId}`;
 
   const copyLink = () => {
     navigator.clipboard.writeText(referralLink);
@@ -42,7 +45,10 @@ const FriendsScreen = () => {
         </div>
         <Button
           className="w-full rounded-2xl h-12 text-base font-extrabold uppercase tracking-wide bg-yellow-400 hover:bg-yellow-500 text-black border-2 border-yellow-500"
-          onClick={copyLink}
+          onClick={() => {
+            const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(referralLink)}&text=${encodeURIComponent("🎮 Royal King Game khelo aur stars kamao! Join karo mere referral link se!")}`;
+            window.open(shareUrl, "_blank");
+          }}
         >
           <Send className="h-5 w-5 mr-2" /> Invite Friends
         </Button>
