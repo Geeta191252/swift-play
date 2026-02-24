@@ -129,21 +129,6 @@ const HomeScreen = () => {
             {/* Content */}
             <div className="px-4 space-y-6 mt-2">
 
-              {/* Recently Played */}
-              <section>
-                <h2 className="font-bold text-lg mb-3" style={{ color: "hsl(45 90% 70%)" }}>🎮 Recently Played</h2>
-                <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-                  <GameTile
-                    image={greedyKingThumb}
-                    name="Greedy King"
-                    description="Win more than FruitMachine"
-                    badge="Wheel"
-                    badgeColor="bg-zinc-800"
-                    delay={0.1}
-                    onClick={goToGreedyKing}
-                  />
-                </div>
-              </section>
 
               {/* Wheel Category */}
               <section>
