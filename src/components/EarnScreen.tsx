@@ -1,17 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
+import createAdHandler from "monetag-tg-sdk";
 import clapperboardIcon from "@/assets/icon-clapperboard.png";
 import { useBalanceContext } from "@/contexts/BalanceContext";
 import { getTelegramUser } from "@/lib/telegram";
 
-declare global {
-  interface Window {
-    show_10648653?: () => Promise<void>;
-  }
-}
-
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://broken-bria-chetan1-ea890b93.koyeb.app/api";
+
+// Initialize Monetag ad handler with zone ID
+const adHandler = createAdHandler(10648653);
 
 const tasks = [
   {
@@ -37,42 +35,22 @@ const tasks = [
 const EarnScreen = () => {
   const [adsWatched, setAdsWatched] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [adReady, setAdReady] = useState(false);
   const { refreshBalance } = useBalanceContext();
-
-  // Check if Monetag script has loaded the show function
-  useEffect(() => {
-    let cancelled = false;
-    const checkReady = () => {
-      if (cancelled) return;
-      if (typeof window.show_10648653 === "function") {
-        setAdReady(true);
-      } else {
-        setTimeout(checkReady, 1500);
-      }
-    };
-    checkReady();
-    return () => { cancelled = true; };
-  }, []);
 
   const handleWatchAd = async () => {
     if (loading) return;
 
-    if (typeof window.show_10648653 !== "function") {
-      toast.error("Ad not loaded yet. Please wait a moment and try again ⏳");
-      return;
-    }
-
     setLoading(true);
     try {
-      // Monetag Rewarded Interstitial — returns a promise that resolves when ad is watched
-      await window.show_10648653();
+      const user = getTelegramUser();
+      const userId = user?.id || "demo";
+
+      // Show ad using official Monetag SDK — resolves when user watches the ad
+      await adHandler(String(userId));
+
       // Ad watched successfully — credit 1 star
       const newCount = adsWatched + 1;
       setAdsWatched(newCount);
-
-      const user = getTelegramUser();
-      const userId = user?.id || "demo";
 
       // Credit 1 star to backend
       await fetch(`${API_BASE_URL}/game/result`, {
@@ -142,12 +120,6 @@ const EarnScreen = () => {
           </motion.div>
         ))}
       </div>
-
-      {!adReady && (
-        <p className="text-center text-sm text-muted-foreground animate-pulse">
-          📡 Ads preloading...
-        </p>
-      )}
 
       {loading && (
         <p className="text-center text-sm text-muted-foreground animate-pulse">
