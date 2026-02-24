@@ -499,6 +499,33 @@ app.post("/api/telegram-webhook", async (req, res) => {
       return res.sendStatus(200);
     }
 
+    // Handle /admin command - only for owner
+    if (update.message?.text === "/admin") {
+      const chatId = update.message.chat.id;
+      const fromId = update.message.from.id;
+
+      if (String(fromId) !== "6965488457") {
+        await bot.sendMessage(chatId, "⛔ You are not authorized to access the admin panel.");
+        return res.sendStatus(200);
+      }
+
+      const webAppUrl = process.env.WEBAPP_URL || process.env.KOYEB_URL || "https://broken-bria-chetan1-ea890b93.koyeb.app";
+      await bot.sendMessage(chatId, "👑 Admin Panel\n\nTap below to open the admin dashboard:", {
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "🛡️ Open Admin Panel",
+                web_app: { url: `${webAppUrl}/admin` },
+              },
+            ],
+          ],
+        },
+      });
+
+      return res.sendStatus(200);
+    }
+
     // Handle successful payment
     if (update.message?.successful_payment) {
       const payment = update.message.successful_payment;
