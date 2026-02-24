@@ -76,46 +76,45 @@ const DiceMasterGame = () => {
     setTimeout(() => {
       if (rollIntervalRef.current) clearInterval(rollIntervalRef.current);
 
-      // Weighted dice: 0x (1) most common, 0.5x (2) common, 1.5x (3) rare, 2x+ almost never
-      const weightedValues = [
-        { value: 1, weight: 50 },  // 0x - ~60%
-        { value: 2, weight: 22 },  // 0.5x - ~26%
-        { value: 3, weight: 8 },   // 1.5x - ~10%
-        { value: 4, weight: 2 },   // 2x - ~2.5%
-        { value: 5, weight: 0.5 }, // 5x - ~0.6%
-        { value: 6, weight: 0.1 }, // 10x - ~0.1%
+      // Pick ONE result multiplier using weighted odds — house always wins
+      const outcomes = [
+        { multiplier: 0,   weight: 55 },   // 0x  — total loss ~55%
+        { multiplier: 0.5, weight: 25 },   // 0.5x — lose half ~25%
+        { multiplier: 1.5, weight: 12 },   // 1.5x — small win ~12%
+        { multiplier: 2,   weight: 5 },    // 2x  — ~5%
+        { multiplier: 5,   weight: 2.5 },  // 5x  — ~2.5%
+        { multiplier: 10,  weight: 0.5 },  // 10x — ~0.5%
       ];
-      const totalWeight = weightedValues.reduce((s, w) => s + w.weight, 0);
-      const pickWeighted = () => {
-        let r = Math.random() * totalWeight;
-        for (const w of weightedValues) {
-          r -= w.weight;
-          if (r <= 0) return w.value;
-        }
-        return 1;
-      };
-      const d1 = pickWeighted();
-      const d2 = pickWeighted();
+      const totalWeight = outcomes.reduce((s, o) => s + o.weight, 0);
+      let r = Math.random() * totalWeight;
+      let chosenMult = 0;
+      for (const o of outcomes) {
+        r -= o.weight;
+        if (r <= 0) { chosenMult = o.multiplier; break; }
+      }
+
+      // Map multiplier back to a die face value for display
+      const resultFace = DICE_FACES.find(f => f.multiplier === chosenMult)!;
+      const d1 = resultFace.value;
+      const d2 = Math.floor(Math.random() * d1) + 1; // second die ≤ first so max = d1
 
       setResultDice([d1, d2]);
       setRollingDice([d1, d2]);
       if (soundRef.current) playResultReveal();
 
-      const sum = d1 + d2;
-      setResults(prev => [sum, ...prev].slice(0, 12));
-      setRound(r => r + 1);
+      setResults(prev => [chosenMult, ...prev].slice(0, 12));
+      setRound(r2 => r2 + 1);
 
-      // Use the higher die's multiplier for result
-      const resultValue = Math.max(d1, d2);
-      const mult = DICE_FACES.find(f => f.value === resultValue)!.multiplier;
-      let prize = selectedBet * mult;
-      if (prize > 0) {
+      const prize = selectedBet * chosenMult;
+      if (prize > selectedBet) {
+        // Actual win (1.5x+)
         setWinAmount(prize);
         setTotalLost(0);
         if (soundRef.current) playWinSound();
       } else {
-        setWinAmount(0);
-        setTotalLost(selectedBet);
+        // Loss (0x, 0.5x) or break-even
+        setWinAmount(prize > 0 ? prize : 0);
+        setTotalLost(prize > 0 ? selectedBet - prize : selectedBet);
         if (soundRef.current) playLoseSound();
       }
       // Report result to backend
@@ -234,9 +233,9 @@ const DiceMasterGame = () => {
         {phase === "result" && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="text-center mb-4">
             {winAmount > 0 ? (
-              <p className="text-xl font-bold" style={{ color: "hsl(50, 90%, 65%)" }}>🎉 You Won {winAmount}!</p>
+              <p className="text-xl font-bold" style={{ color: "hsl(50, 90%, 65%)" }}>🎉 Won {winAmount.toFixed(2)}! ({(winAmount / selectedBet).toFixed(1)}x)</p>
             ) : (
-              <p className="text-xl font-bold" style={{ color: "hsl(0, 70%, 65%)" }}>😔 You Lost {totalLost}</p>
+              <p className="text-xl font-bold" style={{ color: "hsl(0, 70%, 65%)" }}>😔 Lost {totalLost.toFixed(2)}</p>
             )}
             <p className="text-xs mt-1" style={{ color: "hsl(0, 0%, 70%)" }}>Next round in {resultTimer}s</p>
           </motion.div>
