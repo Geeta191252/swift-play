@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import splashBg from "@/assets/splash-bg.jpg";
-import gameLogo from "@/assets/game-logo.jpg";
+import splashLogo from "@/assets/splash-logo.png";
 import { Loader2 } from "lucide-react";
 
 const SplashScreen = () => {
@@ -27,9 +27,9 @@ const SplashScreen = () => {
         animate={{ scale: 1, opacity: 1 }}
         transition={{ duration: 0.6, ease: "easeOut" }}
       >
-        <img src={gameLogo} alt="Greedy King" className="h-28 w-28 rounded-2xl shadow-2xl object-cover" />
-        <h1 className="font-game text-4xl tracking-wider text-foreground text-glow">
-          Greedy King
+        <img src={splashLogo} alt="RoyalKingGameBot" className="h-48 w-auto rounded-2xl shadow-2xl object-contain" />
+        <h1 className="font-game text-3xl tracking-wider text-foreground text-glow">
+          RoyalKingGameBot
         </h1>
       </motion.div>
 
