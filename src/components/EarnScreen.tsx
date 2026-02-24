@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import clapperboardIcon from "@/assets/icon-clapperboard.png";
@@ -37,13 +37,31 @@ const tasks = [
 const EarnScreen = () => {
   const [adsWatched, setAdsWatched] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [adReady, setAdReady] = useState(false);
   const { refreshBalance } = useBalanceContext();
+
+  // Preload ads — poll until the ad function is available
+  const checkAdReady = useCallback(() => {
+    if (window.show_10648653) {
+      setAdReady(true);
+      return true;
+    }
+    return false;
+  }, []);
+
+  useEffect(() => {
+    if (checkAdReady()) return;
+    const interval = setInterval(() => {
+      if (checkAdReady()) clearInterval(interval);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [checkAdReady]);
 
   const handleWatchAd = async () => {
     if (loading) return;
 
     if (!window.show_10648653) {
-      toast.error("Ad not ready yet, please try again in a moment.");
+      toast.error("Ad loading... please wait a few seconds ⏳");
       return;
     }
 
@@ -125,6 +143,12 @@ const EarnScreen = () => {
           </motion.div>
         ))}
       </div>
+
+      {!adReady && (
+        <p className="text-center text-sm text-muted-foreground animate-pulse">
+          📡 Ads preloading...
+        </p>
+      )}
 
       {loading && (
         <p className="text-center text-sm text-muted-foreground animate-pulse">
