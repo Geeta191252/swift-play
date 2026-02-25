@@ -902,6 +902,7 @@ app.post("/api/telegram-webhook", async (req, res) => {
       await bot.sendMessage(chatId, `✅ Broadcast complete!\n\n📨 Sent: ${sent}\n❌ Failed: ${failed}\n👥 Total: ${allUsers.length}`);
 
       return res.sendStatus(200);
+    }
 
     // Handle successful payment
     if (update.message?.successful_payment) {
