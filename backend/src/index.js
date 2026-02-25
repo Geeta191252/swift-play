@@ -865,6 +865,98 @@ app.post("/api/telegram-webhook", async (req, res) => {
       return res.sendStatus(200);
     }
 
+    // Handle /post command - send photo + Play Now button to channel/group
+    if (update.message?.text && update.message.text.startsWith("/post")) {
+      const chatId = update.message.chat.id;
+      const fromId = update.message.from.id;
+
+      if (String(fromId) !== "6965488457") {
+        await bot.sendMessage(chatId, "⛔ You are not authorized to use /post.");
+        return res.sendStatus(200);
+      }
+
+      const webAppUrl = process.env.WEBAPP_URL || process.env.KOYEB_URL || "https://broken-bria-chetan1-ea890b93.koyeb.app";
+
+      // Check if replying to a photo
+      const replyMsg = update.message.reply_to_message;
+      const postText = update.message.text.replace("/post", "").trim();
+
+      if (replyMsg && replyMsg.photo && replyMsg.photo.length > 0) {
+        // Reply to photo mode: /post @channel caption text
+        const parts = postText.split(" ");
+        const targetChat = parts[0];
+        const caption = parts.slice(1).join(" ") || "🎮 Royal King Game - Play Now!";
+
+        if (!targetChat) {
+          await bot.sendMessage(chatId, "⚠️ Reply to a photo and use:\n/post @channel_or_id Caption text\n\nExample:\n/post @MyChannel 🎮 Play Royal King Game now!");
+          return res.sendStatus(200);
+        }
+
+        const photoId = replyMsg.photo[replyMsg.photo.length - 1].file_id;
+
+        try {
+          await bot.sendPhoto(targetChat, photoId, {
+            caption: caption,
+            parse_mode: "Markdown",
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: "🎮 Play Now", url: `https://t.me/RoyalKingGameBot/RoyalKingGame` }],
+              ],
+            },
+          });
+          await bot.sendMessage(chatId, `✅ Post sent to ${targetChat} successfully!`);
+        } catch (err) {
+          await bot.sendMessage(chatId, `❌ Failed to send: ${err.message}\n\nMake sure bot is admin in the channel/group.`);
+        }
+
+        return res.sendStatus(200);
+      }
+
+      // No reply mode: /post @channel photo_url caption
+      const parts = postText.split(" ");
+      if (parts.length < 2) {
+        await bot.sendMessage(chatId, 
+          "⚠️ *Usage:*\n\n" +
+          "*Method 1:* Reply to a photo:\n`/post @channel Caption text`\n\n" +
+          "*Method 2:* With photo URL:\n`/post @channel https://photo-url.jpg Caption text`\n\n" +
+          "Examples:\n" +
+          "`/post @MyChannel https://example.com/banner.jpg 🎮 Play now!`\n" +
+          "`/post -1001234567890 https://example.com/img.jpg Join the fun!`",
+          { parse_mode: "Markdown" }
+        );
+        return res.sendStatus(200);
+      }
+
+      const targetChat = parts[0];
+      let photoUrl = parts[1];
+      let caption = parts.slice(2).join(" ") || "🎮 Royal King Game - Play Now!";
+
+      // Check if second part is a URL
+      if (!photoUrl.startsWith("http")) {
+        // No URL provided, treat as caption
+        caption = parts.slice(1).join(" ");
+        await bot.sendMessage(chatId, "⚠️ Photo URL missing. Use:\n/post @channel https://photo-url.jpg Caption\n\nOr reply to a photo with /post @channel Caption");
+        return res.sendStatus(200);
+      }
+
+      try {
+        await bot.sendPhoto(targetChat, photoUrl, {
+          caption: caption,
+          parse_mode: "Markdown",
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: "🎮 Play Now", url: `https://t.me/RoyalKingGameBot/RoyalKingGame` }],
+            ],
+          },
+        });
+        await bot.sendMessage(chatId, `✅ Post sent to ${targetChat} successfully!`);
+      } catch (err) {
+        await bot.sendMessage(chatId, `❌ Failed to send: ${err.message}\n\nMake sure bot is admin in the channel/group.`);
+      }
+
+      return res.sendStatus(200);
+    }
+
     // Handle /broadcast command - only for owner
     if (update.message?.text && update.message.text.startsWith("/broadcast")) {
       const chatId = update.message.chat.id;
