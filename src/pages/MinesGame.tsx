@@ -15,31 +15,39 @@ type CellState = "hidden" | "safe" | "mine" | "revealed-mine";
 type GamePhase = "betting" | "playing" | "lost" | "cashed";
 
 const getMultiplier = (safePicks: number, totalMines: number): number => {
-  // Ultra low multipliers: 1.01x ~ 1.5x for first 20 picks, 2x only after 20+ picks
-  // Tiny increment per safe pick to keep house edge massive
   if (safePicks <= 0) return 1;
   
-  const riskFactor = totalMines / TOTAL_CELLS;
-  
-  if (safePicks <= 10) {
-    // First 10 picks: 1.01x to ~1.15x (very slow growth)
-    const increment = 0.01 + riskFactor * 0.02;
-    const mult = 1 + safePicks * increment;
-    return Math.floor(mult * 100) / 100;
-  } else if (safePicks <= 20) {
-    // 11-20 picks: ~1.15x to ~1.5x 
-    const base = 1 + 10 * (0.01 + riskFactor * 0.02);
-    const increment = 0.02 + riskFactor * 0.03;
-    const mult = base + (safePicks - 10) * increment;
-    return Math.floor(mult * 100) / 100;
-  } else {
-    // 20+ picks: slowly approach 2x
-    const base10 = 1 + 10 * (0.01 + riskFactor * 0.02);
-    const base20 = base10 + 10 * (0.02 + riskFactor * 0.03);
-    const increment = 0.03 + riskFactor * 0.05;
-    const mult = Math.min(base20 + (safePicks - 20) * increment, 2.5);
-    return Math.floor(mult * 100) / 100;
+  if (totalMines === 1) {
+    // 1 Mine: Start 1.10x, grows very slow, mostly loss at 1.20x, rarely beyond 1.20x
+    // Max reachable ~1.25x, heavy loss probability around 1.20x
+    const multipliers = [
+      1.10, 1.11, 1.12, 1.13, 1.14, 1.15, 1.16, 1.17, 1.18, 1.19,
+      1.20, 1.20, 1.21, 1.21, 1.22, 1.22, 1.23, 1.23, 1.24, 1.24,
+      1.25, 1.25, 1.25, 1.25
+    ];
+    const idx = Math.min(safePicks - 1, multipliers.length - 1);
+    return multipliers[idx];
   }
+  
+  if (totalMines === 3) {
+    // 3 Mines: Start 1.20x, max ~1.80x, mostly loses at 1.40x-1.60x
+    const multipliers = [
+      1.20, 1.22, 1.25, 1.28, 1.30, 1.33, 1.36, 1.38, 1.40, 1.43,
+      1.45, 1.48, 1.50, 1.53, 1.55, 1.58, 1.60, 1.65, 1.70, 1.75,
+      1.80, 1.80
+    ];
+    const idx = Math.min(safePicks - 1, multipliers.length - 1);
+    return multipliers[idx];
+  }
+  
+  // 5, 7, 10, 15 Mines: Same pattern as 3 mines
+  const multipliers = [
+    1.20, 1.22, 1.25, 1.28, 1.30, 1.33, 1.36, 1.38, 1.40, 1.43,
+    1.45, 1.48, 1.50, 1.53, 1.55, 1.58, 1.60, 1.65, 1.70, 1.75,
+    1.80, 1.80
+  ];
+  const idx = Math.min(safePicks - 1, multipliers.length - 1);
+  return multipliers[idx];
 };
 
 const MinesGame = () => {
