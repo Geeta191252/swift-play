@@ -1,13 +1,14 @@
+import { motion } from "framer-motion";
 import navGames from "@/assets/nav-games.png";
 import navEarn from "@/assets/nav-earn.png";
 import navFriends from "@/assets/nav-friends.png";
 import navWallet from "@/assets/nav-wallet.png";
 
 const tabs = [
-  { icon: navGames, label: "Games" },
-  { icon: navEarn, label: "Earn" },
-  { icon: navFriends, label: "Invite" },
-  { icon: navWallet, label: "Wallet" },
+  { icon: navGames, label: "Games", activeColor: "hsl(0 75% 60%)" },
+  { icon: navEarn, label: "Earn", activeColor: "hsl(45 90% 55%)" },
+  { icon: navFriends, label: "Invite", activeColor: "hsl(280 65% 60%)" },
+  { icon: navWallet, label: "Wallet", activeColor: "hsl(140 60% 50%)" },
 ];
 
 interface BottomNavProps {
@@ -17,22 +18,54 @@ interface BottomNavProps {
 
 const BottomNav = ({ activeTab, onTabChange }: BottomNavProps) => {
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-card/90 backdrop-blur-lg">
+    <div className="fixed bottom-0 left-0 right-0 z-40" style={{
+      background: "linear-gradient(180deg, hsla(265, 55%, 18%, 0.95), hsla(270, 50%, 12%, 0.98))",
+      borderTop: "1px solid hsla(280, 50%, 40%, 0.2)",
+      backdropFilter: "blur(20px)",
+      boxShadow: "0 -4px 20px hsla(260, 50%, 10%, 0.5)",
+    }}>
       <div className="mx-auto flex max-w-md items-center justify-around py-1">
-        {tabs.map((tab, i) => (
-          <button
-            key={tab.label}
-            onClick={() => onTabChange(i)}
-            className={`flex flex-col items-center gap-0.5 px-4 py-1 transition-all ${
-              activeTab === i ? "scale-110" : "opacity-60"
-            }`}
-          >
-            <img src={tab.icon} alt={tab.label} className="h-10 w-10 object-contain" />
-            <span className={`text-[10px] font-semibold ${
-              activeTab === i ? "text-primary" : "text-muted-foreground"
-            }`}>{tab.label}</span>
-          </button>
-        ))}
+        {tabs.map((tab, i) => {
+          const isActive = activeTab === i;
+          return (
+            <motion.button
+              key={tab.label}
+              onClick={() => onTabChange(i)}
+              whileTap={{ scale: 0.85 }}
+              className="flex flex-col items-center gap-0.5 px-4 py-1 relative"
+            >
+              {isActive && (
+                <motion.div
+                  layoutId="activeTabGlow"
+                  className="absolute -top-1 w-10 h-1 rounded-full"
+                  style={{
+                    background: tab.activeColor,
+                    boxShadow: `0 0 12px ${tab.activeColor}`,
+                  }}
+                  transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                />
+              )}
+              <motion.img
+                src={tab.icon}
+                alt={tab.label}
+                className="h-10 w-10 object-contain"
+                animate={{
+                  scale: isActive ? 1.15 : 0.9,
+                  opacity: isActive ? 1 : 0.5,
+                  filter: isActive ? `drop-shadow(0 0 6px ${tab.activeColor})` : "none",
+                }}
+                transition={{ type: "spring", stiffness: 200 }}
+              />
+              <motion.span
+                className="text-[10px] font-bold"
+                animate={{ opacity: isActive ? 1 : 0.5 }}
+                style={{ color: isActive ? tab.activeColor : "hsl(260 20% 55%)" }}
+              >
+                {tab.label}
+              </motion.span>
+            </motion.button>
+          );
+        })}
       </div>
     </div>
   );
