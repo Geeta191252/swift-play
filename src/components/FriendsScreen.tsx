@@ -13,7 +13,7 @@ const inviteTasks = [
 const FriendsScreen = () => {
   const user = getTelegramUser();
   const userId = user?.id || "unknown";
-  const referralLink = `https://t.me/RoyalKingGameBot/RoyalKingGame?startapp=ref_${userId}`;
+  const referralLink = `https://t.me/RoyalKingGameBot?start=ref_${userId}`;
 
   const copyLink = () => {
     navigator.clipboard.writeText(referralLink);
