@@ -745,10 +745,77 @@ app.post("/api/telegram-webhook", async (req, res) => {
   try {
     const update = req.body;
 
-    // Handle /start command
-    if (update.message?.text === "/start") {
+    // Handle /start command (with or without referral parameter)
+    if (update.message?.text && update.message.text.startsWith("/start")) {
       const chatId = update.message.chat.id;
       const firstName = update.message.from.first_name || "Player";
+      const fromId = update.message.from.id;
+      const messageText = update.message.text.trim();
+
+      // Extract referral parameter: "/start ref_123456" → "ref_123456"
+      const parts = messageText.split(" ");
+      const startParam = parts.length > 1 ? parts[1] : null;
+
+      const webAppUrl = process.env.WEBAPP_URL || process.env.KOYEB_URL || "https://broken-bria-chetan1-ea890b93.koyeb.app";
+
+      // If referral link, process referral and open app with startapp param
+      if (startParam && startParam.startsWith("ref_")) {
+        const referrerId = startParam.replace("ref_", "");
+
+        // Process referral in backend directly
+        try {
+          const numericUserId = Number(fromId);
+          const numericReferrerId = Number(referrerId);
+
+          if (numericUserId && numericReferrerId && numericUserId !== numericReferrerId) {
+            const user = await getOrCreateUser(numericUserId);
+            const referrer = await getOrCreateUser(numericReferrerId);
+
+            if (referrer && referrer.telegramId !== 0 && !user.referredBy) {
+              user.referredBy = numericReferrerId;
+              user.username = update.message.from.username || undefined;
+              user.firstName = update.message.from.first_name || undefined;
+              user.lastName = update.message.from.last_name || undefined;
+              await user.save();
+
+              referrer.referralCount = (referrer.referralCount || 0) + 1;
+              const count = referrer.referralCount;
+              const reward = count === 1 ? 2 : 3;
+              referrer.starWinning = (referrer.starWinning || 0) + reward;
+              await referrer.save();
+
+              await Transaction.create({
+                telegramId: numericReferrerId,
+                type: "referral",
+                currency: "star",
+                amount: reward,
+                status: "completed",
+                description: `Referral reward: ${reward} Stars (referred user ${numericUserId})`,
+              });
+
+              // Notify referrer
+              try {
+                await bot.sendMessage(numericReferrerId,
+                  `🎉 *New Referral!*\n\n` +
+                  `👤 ${firstName} joined using your link!\n` +
+                  `⭐ You earned ${reward} Stars!\n` +
+                  `📊 Total referrals: ${count}`,
+                  { parse_mode: "Markdown" }
+                );
+              } catch (notifErr) {
+                console.error("Referral notification error:", notifErr.message);
+              }
+            }
+          }
+        } catch (refErr) {
+          console.error("Webhook referral error:", refErr.message);
+        }
+      }
+
+      // Send welcome message with Play button (startapp param included for Mini App)
+      const appUrl = startParam 
+        ? `${webAppUrl}?startapp=${startParam}` 
+        : webAppUrl;
 
       await bot.sendMessage(chatId, `🎮 Welcome ${firstName} to Royal King Game!\n\nTap the button below to start playing!`, {
         reply_markup: {
@@ -756,7 +823,7 @@ app.post("/api/telegram-webhook", async (req, res) => {
             [
               {
                 text: "🎮 Play Now",
-                web_app: { url: process.env.WEBAPP_URL || process.env.KOYEB_URL || "https://broken-bria-chetan1-ea890b93.koyeb.app" },
+                web_app: { url: appUrl },
               },
             ],
           ],
