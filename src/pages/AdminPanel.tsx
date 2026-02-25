@@ -412,7 +412,17 @@ const AdminPanel = () => {
                   <motion.div key={w._id || i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}
                     className="rounded-xl p-3 space-y-2" style={{ background: "hsla(260, 40%, 25%, 0.6)", border: "1px solid hsla(0, 70%, 45%, 0.3)" }}>
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-mono" style={{ color: "hsl(0 0% 60%)" }}>ID: {w.telegramId}</span>
+                      <div>
+                        <span className="text-xs font-mono" style={{ color: "hsl(0 0% 60%)" }}>ID: {w.telegramId}</span>
+                        {(() => {
+                          const user = users.find(u => u.telegramId === w.telegramId);
+                          return user ? (
+                            <p className="text-xs font-bold cursor-pointer" style={{ color: "hsl(210 90% 60%)" }}>
+                              👤 {user.firstName}{user.lastName ? ` ${user.lastName}` : ""}
+                            </p>
+                          ) : null;
+                        })()}
+                      </div>
                       <span className="text-[10px] px-2 py-0.5 rounded-full font-bold" style={{
                         background: "hsla(45, 80%, 50%, 0.2)",
                         color: "hsl(45 80% 65%)",
