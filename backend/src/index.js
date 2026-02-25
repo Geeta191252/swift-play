@@ -8,6 +8,7 @@ const TelegramBot = require("node-telegram-bot-api");
 
 const User = require("./models/User");
 const Transaction = require("./models/Transaction");
+const GameBet = require("./models/GameBet");
 
 const app = express();
 const PORT = process.env.PORT || 8000;
@@ -1352,6 +1353,279 @@ app.post("/api/crypto/check-status", async (req, res) => {
     return res.json({ status: tx.status, amount: tx.amount });
   } catch (error) {
     return res.status(500).json({ error: "Failed to check status" });
+  }
+});
+
+// ============================================
+// GREEDY KING MULTIPLAYER ROUND SYSTEM
+// ============================================
+const FOOD_ITEMS_SERVER = [
+  { emoji: "🌭", name: "Hot Dog", multiplier: 10 },
+  { emoji: "🥩", name: "BBQ", multiplier: 15 },
+  { emoji: "🍗", name: "Chicken", multiplier: 25 },
+  { emoji: "🥓", name: "Steak", multiplier: 45 },
+  { emoji: "🌽", name: "Corn", multiplier: 5 },
+  { emoji: "🥬", name: "Cabbage", multiplier: 5 },
+  { emoji: "🍅", name: "Tomato", multiplier: 5 },
+  { emoji: "🥕", name: "Carrot", multiplier: 5 },
+];
+
+// In-memory round state
+const greedyKingState = {
+  roundNumber: 1,
+  phase: "betting", // betting, countdown, spinning, result
+  phaseStartTime: Date.now(),
+  winnerIndex: null,
+  lastResults: [], // last 12 emoji results
+};
+
+// Phase durations in ms
+const PHASE_DURATIONS = {
+  betting: 15000,
+  countdown: 3000,
+  spinning: 4000,
+  result: 4000,
+};
+
+function getPhaseTimeLeft() {
+  const elapsed = Date.now() - greedyKingState.phaseStartTime;
+  const duration = PHASE_DURATIONS[greedyKingState.phase];
+  return Math.max(0, Math.ceil((duration - elapsed) / 1000));
+}
+
+async function advancePhase() {
+  const { phase } = greedyKingState;
+
+  if (phase === "betting") {
+    greedyKingState.phase = "countdown";
+    greedyKingState.phaseStartTime = Date.now();
+    setTimeout(advancePhase, PHASE_DURATIONS.countdown);
+  } else if (phase === "countdown") {
+    greedyKingState.phase = "spinning";
+    greedyKingState.phaseStartTime = Date.now();
+
+    // Determine winner: fruit with least total bets
+    const roundNum = greedyKingState.roundNumber;
+    const bets = await GameBet.find({ roundNumber: roundNum });
+
+    const totalPerFruit = FOOD_ITEMS_SERVER.map(() => 0);
+    bets.forEach((b) => {
+      totalPerFruit[b.fruitIndex] += b.amount;
+    });
+
+    // Add small random base so empty rounds still pick
+    const withBase = totalPerFruit.map((t) => t + Math.random() * 0.1);
+    const minVal = Math.min(...withBase);
+    const minFruits = withBase.map((v, i) => (v === minVal ? i : -1)).filter((i) => i !== -1);
+    const winnerIdx = minFruits[Math.floor(Math.random() * minFruits.length)];
+
+    greedyKingState.winnerIndex = winnerIdx;
+
+    // Process results after spin duration
+    setTimeout(async () => {
+      // Process all bets for this round
+      const roundBets = await GameBet.find({ roundNumber: roundNum });
+      const playerBets = {};
+
+      // Group bets by player
+      roundBets.forEach((b) => {
+        const key = `${b.telegramId}_${b.currency}`;
+        if (!playerBets[key]) {
+          playerBets[key] = { telegramId: b.telegramId, currency: b.currency, bets: FOOD_ITEMS_SERVER.map(() => 0), totalBet: 0 };
+        }
+        playerBets[key].bets[b.fruitIndex] += b.amount;
+        playerBets[key].totalBet += b.amount;
+      });
+
+      // Process each player's result
+      for (const player of Object.values(playerBets)) {
+        const betOnWinner = player.bets[winnerIdx];
+        const totalBet = player.totalBet;
+        let winAmount = 0;
+
+        if (betOnWinner > 0) {
+          winAmount = betOnWinner * FOOD_ITEMS_SERVER[winnerIdx].multiplier;
+        }
+
+        // Report to game/result endpoint logic
+        try {
+          const user = await getOrCreateUser(player.telegramId);
+          const balanceField = player.currency === "dollar" ? "dollarBalance" : "starBalance";
+          const winningField = player.currency === "dollar" ? "dollarWinning" : "starWinning";
+
+          if (winAmount > 0) {
+            user[winningField] = (user[winningField] || 0) + winAmount;
+          }
+          // Bet was already deducted when placed
+          await user.save();
+
+          if (winAmount > 0) {
+            await Transaction.create({
+              telegramId: player.telegramId, type: "win", currency: player.currency,
+              amount: winAmount, status: "completed",
+              description: `greedy-king: Bet ${totalBet}, Won ${winAmount} (Round ${roundNum})`,
+              game: "greedy-king",
+            });
+          }
+          if (totalBet > 0) {
+            await Transaction.create({
+              telegramId: player.telegramId, type: "bet", currency: player.currency,
+              amount: -totalBet, status: "completed",
+              description: `greedy-king: Bet ${totalBet} (Round ${roundNum})`,
+              game: "greedy-king",
+            });
+          }
+        } catch (err) {
+          console.error("Greedy King result processing error:", err);
+        }
+      }
+
+      // Update results history
+      greedyKingState.lastResults = [
+        FOOD_ITEMS_SERVER[winnerIdx].emoji,
+        ...greedyKingState.lastResults,
+      ].slice(0, 12);
+
+      // Move to result phase
+      greedyKingState.phase = "result";
+      greedyKingState.phaseStartTime = Date.now();
+      setTimeout(() => {
+        greedyKingState.roundNumber++;
+        greedyKingState.phase = "betting";
+        greedyKingState.phaseStartTime = Date.now();
+        greedyKingState.winnerIndex = null;
+        setTimeout(advancePhase, PHASE_DURATIONS.betting);
+      }, PHASE_DURATIONS.result);
+    }, PHASE_DURATIONS.spinning);
+  }
+}
+
+// Start the first round cycle
+setTimeout(advancePhase, PHASE_DURATIONS.betting);
+
+// GET /api/greedy-king/state - Get current round state
+app.get("/api/greedy-king/state", async (req, res) => {
+  try {
+    const { currency } = req.query;
+    const curr = currency || "dollar";
+    const roundNum = greedyKingState.roundNumber;
+
+    // Get all bets for current round with this currency
+    const bets = await GameBet.find({ roundNumber: roundNum, currency: curr });
+
+    // Aggregate per fruit
+    const fruitBets = FOOD_ITEMS_SERVER.map(() => ({ totalAmount: 0, playerCount: 0, players: [] }));
+    const playerSet = {};
+    bets.forEach((b) => {
+      fruitBets[b.fruitIndex].totalAmount += b.amount;
+      if (!playerSet[`${b.telegramId}_${b.fruitIndex}`]) {
+        playerSet[`${b.telegramId}_${b.fruitIndex}`] = true;
+        fruitBets[b.fruitIndex].playerCount++;
+        fruitBets[b.fruitIndex].players.push({ name: b.firstName, amount: b.amount });
+      } else {
+        // Update existing player amount
+        const existing = fruitBets[b.fruitIndex].players.find(p => p.name === b.firstName);
+        if (existing) existing.amount += b.amount;
+      }
+    });
+
+    // Total unique players
+    const uniquePlayers = new Set(bets.map((b) => b.telegramId)).size;
+
+    return res.json({
+      roundNumber: roundNum,
+      phase: greedyKingState.phase,
+      timeLeft: getPhaseTimeLeft(),
+      winnerIndex: (greedyKingState.phase === "spinning" || greedyKingState.phase === "result") ? greedyKingState.winnerIndex : null,
+      fruitBets: fruitBets.map((f) => ({ totalAmount: f.totalAmount, playerCount: f.playerCount, players: f.players.slice(0, 5) })),
+      totalPlayers: uniquePlayers,
+      lastResults: greedyKingState.lastResults,
+    });
+  } catch (error) {
+    console.error("Greedy King state error:", error);
+    return res.status(500).json({ error: "Failed to get game state" });
+  }
+});
+
+// POST /api/greedy-king/bet - Place a bet
+app.post("/api/greedy-king/bet", async (req, res) => {
+  try {
+    const { userId, fruitIndex, amount, currency, firstName } = req.body;
+
+    if (!userId || fruitIndex === undefined || !amount || !currency) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    if (greedyKingState.phase !== "betting") {
+      return res.status(400).json({ error: "Betting is closed for this round" });
+    }
+
+    if (fruitIndex < 0 || fruitIndex > 7) {
+      return res.status(400).json({ error: "Invalid fruit index" });
+    }
+
+    const user = await getOrCreateUser(userId);
+    const balanceField = currency === "dollar" ? "dollarBalance" : "starBalance";
+    const winningField = currency === "dollar" ? "dollarWinning" : "starWinning";
+    const walletBal = user[balanceField] || 0;
+    const winningBal = user[winningField] || 0;
+    const totalPlayable = walletBal + winningBal;
+
+    if (totalPlayable < amount) {
+      return res.status(400).json({ error: "Insufficient balance" });
+    }
+
+    // Deduct balance immediately (wallet first, then winning)
+    const deductFromWallet = Math.min(walletBal, amount);
+    const deductFromWinning = amount - deductFromWallet;
+    user[balanceField] = walletBal - deductFromWallet;
+    user[winningField] = winningBal - deductFromWinning;
+    await user.save();
+
+    // Save bet
+    await GameBet.create({
+      roundNumber: greedyKingState.roundNumber,
+      telegramId: Number(userId),
+      firstName: firstName || "Player",
+      fruitIndex,
+      amount,
+      currency,
+    });
+
+    return res.json({
+      success: true,
+      roundNumber: greedyKingState.roundNumber,
+      dollarBalance: user.dollarBalance,
+      starBalance: user.starBalance,
+      dollarWinning: user.dollarWinning || 0,
+      starWinning: user.starWinning || 0,
+    });
+  } catch (error) {
+    console.error("Greedy King bet error:", error);
+    return res.status(500).json({ error: "Failed to place bet" });
+  }
+});
+
+// GET /api/greedy-king/my-bets - Get user's bets for current round
+app.get("/api/greedy-king/my-bets", async (req, res) => {
+  try {
+    const { userId, currency } = req.query;
+    if (!userId) return res.status(400).json({ error: "Missing userId" });
+
+    const bets = await GameBet.find({
+      roundNumber: greedyKingState.roundNumber,
+      telegramId: Number(userId),
+      currency: currency || "dollar",
+    });
+
+    const myBets = FOOD_ITEMS_SERVER.map(() => 0);
+    bets.forEach((b) => {
+      myBets[b.fruitIndex] += b.amount;
+    });
+
+    return res.json({ myBets, roundNumber: greedyKingState.roundNumber });
+  } catch (error) {
+    return res.status(500).json({ error: "Failed to get bets" });
   }
 });
 
