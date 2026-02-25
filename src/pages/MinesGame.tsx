@@ -15,13 +15,31 @@ type CellState = "hidden" | "safe" | "mine" | "revealed-mine";
 type GamePhase = "betting" | "playing" | "lost" | "cashed";
 
 const getMultiplier = (safePicks: number, totalMines: number): number => {
-  // Heavy house-edge: multipliers stay low (1.1x, 1.2x, 1.5x range)
-  // Base increment per safe pick is very small
-  const riskFactor = totalMines / TOTAL_CELLS; // 0.04 to 0.4
-  const increment = 0.05 + riskFactor * 0.15; // 0.056 to 0.11 per pick
-  const mult = 1 + safePicks * increment;
-  // Cap multiplier to keep it low
-  return Math.floor(mult * 100) / 100;
+  // Ultra low multipliers: 1.01x ~ 1.5x for first 20 picks, 2x only after 20+ picks
+  // Tiny increment per safe pick to keep house edge massive
+  if (safePicks <= 0) return 1;
+  
+  const riskFactor = totalMines / TOTAL_CELLS;
+  
+  if (safePicks <= 10) {
+    // First 10 picks: 1.01x to ~1.15x (very slow growth)
+    const increment = 0.01 + riskFactor * 0.02;
+    const mult = 1 + safePicks * increment;
+    return Math.floor(mult * 100) / 100;
+  } else if (safePicks <= 20) {
+    // 11-20 picks: ~1.15x to ~1.5x 
+    const base = 1 + 10 * (0.01 + riskFactor * 0.02);
+    const increment = 0.02 + riskFactor * 0.03;
+    const mult = base + (safePicks - 10) * increment;
+    return Math.floor(mult * 100) / 100;
+  } else {
+    // 20+ picks: slowly approach 2x
+    const base10 = 1 + 10 * (0.01 + riskFactor * 0.02);
+    const base20 = base10 + 10 * (0.02 + riskFactor * 0.03);
+    const increment = 0.03 + riskFactor * 0.05;
+    const mult = Math.min(base20 + (safePicks - 20) * increment, 2.5);
+    return Math.floor(mult * 100) / 100;
+  }
 };
 
 const MinesGame = () => {
