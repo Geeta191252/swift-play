@@ -413,15 +413,15 @@ const AdminPanel = () => {
                     className="rounded-xl p-3 space-y-2" style={{ background: "hsla(260, 40%, 25%, 0.6)", border: "1px solid hsla(0, 70%, 45%, 0.3)" }}>
                     <div className="flex items-center justify-between">
                       <div>
-                        <span className="text-xs font-mono" style={{ color: "hsl(0 0% 60%)" }}>ID: {w.telegramId}</span>
                         {(() => {
                           const user = users.find(u => u.telegramId === w.telegramId);
                           return user ? (
-                            <p className="text-xs font-bold cursor-pointer" style={{ color: "hsl(210 90% 60%)" }}>
+                            <p className="text-xs font-bold cursor-pointer mb-0.5" style={{ color: "hsl(210 90% 60%)" }}>
                               👤 {user.firstName}{user.lastName ? ` ${user.lastName}` : ""}
                             </p>
                           ) : null;
                         })()}
+                        <span className="text-xs font-mono" style={{ color: "hsl(0 0% 60%)" }}>ID: {w.telegramId}</span>
                       </div>
                       <span className="text-[10px] px-2 py-0.5 rounded-full font-bold" style={{
                         background: "hsla(45, 80%, 50%, 0.2)",
