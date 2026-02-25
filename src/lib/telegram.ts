@@ -127,7 +127,7 @@ export const initiatePayment = async (
 /**
  * Fetch user balance from backend
  */
-export const fetchBalance = async (): Promise<{ dollarBalance: number; starBalance: number; dollarWinning: number; starWinning: number }> => {
+export const fetchBalance = async (): Promise<{ dollarBalance: number; starBalance: number; dollarWinning: number; starWinning: number; referralCount: number }> => {
   const tg = getTelegram();
   const userId = tg?.initDataUnsafe?.user?.id;
 

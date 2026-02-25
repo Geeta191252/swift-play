@@ -1,19 +1,22 @@
 import { motion } from "framer-motion";
-import { Copy, Send } from "lucide-react";
+import { Copy, Send, Check } from "lucide-react";
 import { Button } from "./ui/button";
 import { toast } from "@/hooks/use-toast";
 import { getTelegramUser, getTelegram } from "@/lib/telegram";
+import { useBalance } from "@/hooks/useBalance";
 
 const inviteTasks = [
-  { title: "Invite 1st friend", reward: "2", icon: "⭐" },
-  { title: "Invite 2nd friend", reward: "3", icon: "⭐" },
-  { title: "Invite 3rd friend", reward: "3", icon: "⭐" },
+  { title: "Invite 1st friend", reward: "2", icon: "⭐", target: 1 },
+  { title: "Invite 2nd friend", reward: "3", icon: "⭐", target: 2 },
+  { title: "Invite 3rd friend", reward: "3", icon: "⭐", target: 3 },
 ];
 
 const FriendsScreen = () => {
   const user = getTelegramUser();
   const userId = user?.id || "unknown";
   const referralLink = `https://t.me/RoyalKingGameBot?start=ref_${userId}`;
+  const { data } = useBalance();
+  const referralCount = data?.referralCount || 0;
 
   const copyLink = () => {
     navigator.clipboard.writeText(referralLink);
@@ -61,24 +64,34 @@ const FriendsScreen = () => {
 
       {/* Invite Tasks */}
       <div className="space-y-3">
-        {inviteTasks.map((task, i) => (
-          <motion.div
-            key={task.title}
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: i * 0.08 }}
-            className="flex items-center gap-3 p-3 rounded-2xl bg-card/60 border border-border/50"
-          >
-            <div className="h-14 w-14 rounded-xl bg-muted/50 flex items-center justify-center shrink-0 text-3xl">
-              🧑‍🤝‍🧑
-            </div>
-            <div className="flex-1 min-w-0">
-              <h4 className="font-bold text-sm text-foreground">{task.title}</h4>
-            </div>
-            <span className="text-xl font-bold text-foreground shrink-0">{task.reward}</span>
-            <span className="text-lg shrink-0">{task.icon}</span>
-          </motion.div>
-        ))}
+        {inviteTasks.map((task, i) => {
+          const completed = referralCount >= task.target;
+          return (
+            <motion.div
+              key={task.title}
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: i * 0.08 }}
+              className={`flex items-center gap-3 p-3 rounded-2xl border ${completed ? "bg-green-900/20 border-green-500/40" : "bg-card/60 border-border/50"}`}
+            >
+              <div className={`h-14 w-14 rounded-xl flex items-center justify-center shrink-0 text-3xl ${completed ? "bg-green-500/20" : "bg-muted/50"}`}>
+                {completed ? <Check className="h-8 w-8 text-green-400" /> : "🧑‍🤝‍🧑"}
+              </div>
+              <div className="flex-1 min-w-0">
+                <h4 className="font-bold text-sm text-foreground">{task.title}</h4>
+                {completed && <p className="text-xs text-green-400">✅ Completed</p>}
+              </div>
+              <span className="text-xl font-bold text-foreground shrink-0">{task.reward}</span>
+              <span className="text-lg shrink-0">{task.icon}</span>
+            </motion.div>
+          );
+        })}
+      </div>
+
+      {/* Total Referral Count */}
+      <div className="bg-card/60 border border-border/50 rounded-2xl p-4 text-center">
+        <p className="text-muted-foreground text-xs mb-1">Total Referrals</p>
+        <p className="text-3xl font-extrabold text-foreground">{referralCount}</p>
       </div>
 
       <div className="text-xs text-muted-foreground text-center px-2 space-y-1">
