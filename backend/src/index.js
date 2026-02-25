@@ -279,6 +279,7 @@ app.post("/api/balance", async (req, res) => {
       starBalance: user.starBalance,
       dollarWinning: user.dollarWinning || 0,
       starWinning: user.starWinning || 0,
+      referralCount: user.referralCount || 0,
     });
   } catch (error) {
     console.error("Balance error:", error);
