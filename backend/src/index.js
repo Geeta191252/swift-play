@@ -888,7 +888,7 @@ app.post("/api/telegram-webhook", async (req, res) => {
         const caption = parts.slice(1).join(" ") || "🎮 Royal King Game - Play Now!";
 
         if (!targetChat) {
-          await bot.sendMessage(chatId, "⚠️ Reply to a photo and use:\n/post @channel_or_id Caption text\n\nExample:\n/post @MyChannel 🎮 Play Royal King Game now!");
+          await bot.sendMessage(chatId, "⚠️ Reply to a photo and use:\n/post <channel\\_id> Caption text\n\n📌 *Private channel/group:*\nChat ID use karo (e.g. `-1001234567890`)\n\n📌 *Public channel:*\n`@channel_username` use karo\n\n🔍 *Private channel ID kaise pata kare:*\nChannel mein koi message forward karo @userinfobot ko, woh ID de dega.\n\nExample:\n`/post -1001234567890 🎮 Play Royal King Game now!`\n`/post @MyChannel 🎮 Play now!`", { parse_mode: "Markdown" });
           return res.sendStatus(200);
         }
 
@@ -917,11 +917,14 @@ app.post("/api/telegram-webhook", async (req, res) => {
       if (parts.length < 2) {
         await bot.sendMessage(chatId, 
           "⚠️ *Usage:*\n\n" +
-          "*Method 1:* Reply to a photo:\n`/post @channel Caption text`\n\n" +
-          "*Method 2:* With photo URL:\n`/post @channel https://photo-url.jpg Caption text`\n\n" +
+          "*Method 1:* Reply to a photo:\n`/post <chat\\_id> Caption text`\n\n" +
+          "*Method 2:* With photo URL:\n`/post <chat\\_id> https://photo-url.jpg Caption text`\n\n" +
+          "📌 *Private channel/group* → Chat ID use karo:\n`-1001234567890`\n" +
+          "📌 *Public channel* → Username use karo:\n`@MyChannel`\n\n" +
+          "🔍 *ID kaise pata kare:*\nChannel se msg forward karo @userinfobot ko\n\n" +
           "Examples:\n" +
-          "`/post @MyChannel https://example.com/banner.jpg 🎮 Play now!`\n" +
-          "`/post -1001234567890 https://example.com/img.jpg Join the fun!`",
+          "`/post -1001234567890 https://example.com/banner.jpg 🎮 Play now!`\n" +
+          "`/post @MyChannel https://example.com/img.jpg Join the fun!`",
           { parse_mode: "Markdown" }
         );
         return res.sendStatus(200);
@@ -935,7 +938,7 @@ app.post("/api/telegram-webhook", async (req, res) => {
       if (!photoUrl.startsWith("http")) {
         // No URL provided, treat as caption
         caption = parts.slice(1).join(" ");
-        await bot.sendMessage(chatId, "⚠️ Photo URL missing. Use:\n/post @channel https://photo-url.jpg Caption\n\nOr reply to a photo with /post @channel Caption");
+        await bot.sendMessage(chatId, "⚠️ Photo URL missing. Use:\n`/post <chat\\_id> https://photo-url.jpg Caption`\n\nOr reply to a photo with:\n`/post <chat\\_id> Caption`\n\n📌 Private channel ke liye chat ID use karo: `-1001234567890`", { parse_mode: "Markdown" });
         return res.sendStatus(200);
       }
 
