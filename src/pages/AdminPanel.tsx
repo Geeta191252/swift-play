@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Users, Star, DollarSign, RefreshCw, User, CreditCard, Plus, Minus, X } from "lucide-react";
+import { ArrowLeft, Users, Star, DollarSign, RefreshCw, User, CreditCard, Plus, Minus, X, Copy } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { getTelegramUser } from "@/lib/telegram";
 
@@ -51,6 +52,7 @@ type Tab = "stats" | "users" | "withdrawals";
 
 const AdminPanel = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [users, setUsers] = useState<UserData[]>([]);
   const [withdrawals, setWithdrawals] = useState<WithdrawalRequest[]>([]);
@@ -427,7 +429,21 @@ const AdminPanel = () => {
                         🔗 Network: <span style={{ color: "hsl(45 80% 65%)" }}>{w.withdrawalNetwork || "Not specified"}</span>
                       </p>
                       <p className="text-[10px] font-bold" style={{ color: "hsl(200 70% 60%)" }}>📍 Crypto Address:</p>
-                      <p className="text-[11px] font-mono break-all" style={{ color: "hsl(0 0% 80%)" }}>{w.cryptoAddress || "N/A"}</p>
+                      <div className="flex items-center gap-1">
+                        <p className="text-[11px] font-mono break-all flex-1" style={{ color: "hsl(0 0% 80%)" }}>{w.cryptoAddress || "N/A"}</p>
+                        {w.cryptoAddress && (
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(w.cryptoAddress || "");
+                              toast({ title: "✅ Copied!", description: "Address copied to clipboard" });
+                            }}
+                            className="shrink-0 p-1 rounded hover:bg-white/10 transition-colors"
+                            title="Copy address"
+                          >
+                            <Copy className="w-3.5 h-3.5" style={{ color: "hsl(45 80% 65%)" }} />
+                          </button>
+                        )}
+                      </div>
                     </div>
                     <p className="text-[10px]" style={{ color: "hsl(0 0% 45%)" }}>
                       {new Date(w.createdAt).toLocaleString()}
