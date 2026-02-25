@@ -225,62 +225,54 @@ export const reportGameResult = async (data: {
  * Process referral if user opened app via invite link
  */
 export const processReferral = async (): Promise<void> => {
-  // Wait for Telegram WebApp to be fully ready
-  await new Promise((resolve) => setTimeout(resolve, 500));
+  // ... keep existing code
+};
 
-  const tg = getTelegram();
-  if (!tg) {
-    console.log("Referral: No Telegram WebApp found");
-    return;
+// ============================================
+// GREEDY KING MULTIPLAYER API
+// ============================================
+
+export interface GreedyKingState {
+  roundNumber: number;
+  phase: "betting" | "countdown" | "spinning" | "result";
+  timeLeft: number;
+  winnerIndex: number | null;
+  fruitBets: Array<{
+    totalAmount: number;
+    playerCount: number;
+    players: Array<{ name: string; amount: number }>;
+  }>;
+  totalPlayers: number;
+  lastResults: string[];
+}
+
+export const fetchGreedyKingState = async (currency: CurrencyType): Promise<GreedyKingState> => {
+  const res = await fetch(`${API_BASE_URL}/greedy-king/state?currency=${currency}`);
+  if (!res.ok) throw new Error("Failed to fetch game state");
+  return res.json();
+};
+
+export const placeGreedyKingBet = async (data: {
+  userId: number | string;
+  fruitIndex: number;
+  amount: number;
+  currency: CurrencyType;
+  firstName?: string;
+}): Promise<{ success: boolean }> => {
+  const res = await fetch(`${API_BASE_URL}/greedy-king/bet`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error || "Failed to place bet");
   }
+  return res.json();
+};
 
-  // Call ready() to ensure WebApp is initialized
-  try { tg.ready(); } catch (_) {}
-
-  const userId = tg.initDataUnsafe?.user?.id;
-  const startParam = tg.initDataUnsafe?.start_param;
-
-  console.log("Referral check:", { userId, startParam, initDataUnsafe: JSON.stringify(tg.initDataUnsafe) });
-
-  if (!userId || !startParam) {
-    console.log("Referral: No userId or start_param");
-    return;
-  }
-
-  // Support both "ref_123" format
-  if (!startParam.startsWith("ref_")) {
-    console.log("Referral: start_param doesn't start with ref_:", startParam);
-    return;
-  }
-
-  const referrerId = startParam.replace("ref_", "");
-  if (!referrerId || referrerId === String(userId)) {
-    console.log("Referral: Invalid referrerId or self-referral");
-    return;
-  }
-
-  // Check if already processed - use localStorage to persist across sessions
-  const key = `referral_processed_${userId}_${referrerId}`;
-  if (localStorage.getItem(key)) {
-    console.log("Referral: Already processed");
-    return;
-  }
-
-  try {
-    console.log("Referral: Sending to backend", { userId, referrerId });
-    const res = await fetch(`${API_BASE_URL}/referral`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId, referrerId }),
-    });
-
-    const data = await res.json();
-    console.log("Referral result:", data);
-    
-    if (data.success || data.message === "Already referred") {
-      localStorage.setItem(key, "true");
-    }
-  } catch (err) {
-    console.error("Referral processing error:", err);
-  }
+export const fetchMyGreedyKingBets = async (userId: number | string, currency: CurrencyType): Promise<{ myBets: number[]; roundNumber: number }> => {
+  const res = await fetch(`${API_BASE_URL}/greedy-king/my-bets?userId=${userId}&currency=${currency}`);
+  if (!res.ok) throw new Error("Failed to fetch bets");
+  return res.json();
 };

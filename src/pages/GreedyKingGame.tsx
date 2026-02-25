@@ -1,10 +1,10 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { BarChart3, CircleHelp, Diamond, ChevronRight, History, Home, Trophy, Volume2, VolumeX, X } from "lucide-react";
+import { Diamond, ChevronRight, Home, Trophy, Volume2, VolumeX, X, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { playBetSound, playSpinSound, playWinSound, playLoseSound, playCountdownBeep, playResultReveal, startBgMusic, stopBgMusic } from "@/hooks/useGameSounds";
 import { useBalanceContext } from "@/contexts/BalanceContext";
-import { reportGameResult, type CurrencyType } from "@/lib/telegram";
+import { getTelegram, fetchGreedyKingState, placeGreedyKingBet, fetchMyGreedyKingBets, type CurrencyType, type GreedyKingState } from "@/lib/telegram";
 
 const FOOD_ITEMS = [
   { emoji: "🌭", name: "Hot Dog", multiplier: 10 },
@@ -56,182 +56,164 @@ const GreedyKingGame = () => {
   const soundRef = useRef(true);
   useEffect(() => { soundRef.current = soundOn; }, [soundOn]);
   const { dollarBalance, starBalance, dollarWinning, starWinning, refreshBalance } = useBalanceContext();
-  const [localDollarAdj, setLocalDollarAdj] = useState(0);
-  const [localStarAdj, setLocalStarAdj] = useState(0);
-  const gameDollarBalance = dollarBalance + dollarWinning + localDollarAdj;
-  const gameStarBalance = starBalance + starWinning + localStarAdj;
+  const gameDollarBalance = dollarBalance + dollarWinning;
+  const gameStarBalance = starBalance + starWinning;
   const [todayProfits, setTodayProfits] = useState(0);
   const [activeWallet, setActiveWallet] = useState<"dollar" | "star">("dollar");
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [leaderboardTab, setLeaderboardTab] = useState<"dollar" | "star">("dollar");
   const [selectedBet, setSelectedBet] = useState(10);
-  const [userBets, setUserBets] = useState<number[]>(() => FOOD_ITEMS.map(() => 0));
+
+  // Multiplayer state from server
+  const [serverState, setServerState] = useState<GreedyKingState | null>(null);
+  const [myBets, setMyBets] = useState<number[]>(() => FOOD_ITEMS.map(() => 0));
   const [phase, setPhase] = useState<GamePhase>("betting");
   const [countdown, setCountdown] = useState(15);
   const [wheelAngle, setWheelAngle] = useState(0);
   const [results, setResults] = useState<string[]>([]);
-  const [todayRound, setTodayRound] = useState(381);
+  const [todayRound, setTodayRound] = useState(1);
   const [currentWinner, setCurrentWinner] = useState<{ item: typeof FOOD_ITEMS[0]; index: number } | null>(null);
   const [winAmount, setWinAmount] = useState(0);
   const [totalLost, setTotalLost] = useState(0);
   const [resultTimer, setResultTimer] = useState(4);
-  // Separate fake bets per wallet
-  const [fakeBetsDollar] = useState<number[]>(() =>
-    FOOD_ITEMS.map(() => Math.floor(Math.random() * 50) + 5)
-  );
-  const [fakeBetsStar] = useState<number[]>(() =>
-    FOOD_ITEMS.map(() => Math.floor(Math.random() * 40) + 3)
-  );
-  const fakeBetCounts = activeWallet === "dollar" ? fakeBetsDollar : fakeBetsStar;
+  const [totalPlayers, setTotalPlayers] = useState(0);
+  const [fruitBets, setFruitBets] = useState<GreedyKingState["fruitBets"]>([]);
   const totalRotationRef = useRef(0);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const userBetsRef = useRef<number[]>(FOOD_ITEMS.map(() => 0));
+  const prevPhaseRef = useRef<string>("betting");
+  const prevRoundRef = useRef<number>(0);
+  const spinDoneRef = useRef(false);
 
-  useEffect(() => { userBetsRef.current = userBets; }, [userBets]);
-
-  const totalUserBet = userBets.reduce((a, b) => a + b, 0);
+  const totalUserBet = myBets.reduce((a, b) => a + b, 0);
   const hasBet = totalUserBet > 0;
 
-  useEffect(() => {
-    startBettingPhase();
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-      stopBgMusic();
-    };
-  }, []);
+  const tg = getTelegram();
+  const userId = tg?.initDataUnsafe?.user?.id || "demo";
+  const firstName = tg?.initDataUnsafe?.user?.first_name || "Player";
 
   // Toggle bg music with sound setting
   useEffect(() => {
     if (soundOn) startBgMusic();
     else stopBgMusic();
+    return () => { stopBgMusic(); };
   }, [soundOn]);
 
-  const startBettingPhase = useCallback(() => {
-    setPhase("betting");
-    setUserBets(FOOD_ITEMS.map(() => 0));
-    setCurrentWinner(null);
-    setWinAmount(0);
-    setTotalLost(0);
-    setCountdown(15);
+  // Poll server state every 1 second
+  useEffect(() => {
+    const pollState = async () => {
+      try {
+        const state = await fetchGreedyKingState(activeWallet);
+        setServerState(state);
+        setTodayRound(state.roundNumber);
+        setResults(state.lastResults);
+        setTotalPlayers(state.totalPlayers);
+        setFruitBets(state.fruitBets);
 
-    if (timerRef.current) clearInterval(timerRef.current);
-    timerRef.current = setInterval(() => {
-      setCountdown(prev => {
-        if (prev <= 1) {
-          if (timerRef.current) clearInterval(timerRef.current);
-          startCountdownPhase();
-          return 0;
+        const newPhase = state.phase;
+        const prevPhase = prevPhaseRef.current;
+
+        // Phase transition sounds
+        if (newPhase !== prevPhase) {
+          if (newPhase === "countdown" && soundRef.current) playCountdownBeep();
+          if (newPhase === "spinning") {
+            if (soundRef.current) playSpinSound();
+            spinDoneRef.current = false;
+            // Animate wheel to winner
+            if (state.winnerIndex !== null) {
+              const extraSpins = 4 + Math.floor(Math.random() * 3);
+              const targetAngle = totalRotationRef.current + (extraSpins * 360) + (360 - (state.winnerIndex * 45));
+              totalRotationRef.current = targetAngle;
+              setWheelAngle(targetAngle);
+            }
+          }
+          if (newPhase === "result" && !spinDoneRef.current) {
+            spinDoneRef.current = true;
+            if (soundRef.current) playResultReveal();
+            if (state.winnerIndex !== null) {
+              const won = FOOD_ITEMS[state.winnerIndex];
+              setCurrentWinner({ item: won, index: state.winnerIndex });
+            }
+            // Calculate user's win/loss
+            const myTotalBet = myBets.reduce((a, b) => a + b, 0);
+            if (myTotalBet > 0 && state.winnerIndex !== null) {
+              const betOnWinner = myBets[state.winnerIndex];
+              if (betOnWinner > 0) {
+                const amt = betOnWinner * FOOD_ITEMS[state.winnerIndex].multiplier;
+                setWinAmount(amt);
+                setTotalLost(myTotalBet - betOnWinner);
+                setTodayProfits(p => p + amt - myTotalBet);
+                if (soundRef.current) playWinSound();
+              } else {
+                setWinAmount(0);
+                setTotalLost(myTotalBet);
+                setTodayProfits(p => p - myTotalBet);
+                if (soundRef.current) playLoseSound();
+              }
+              refreshBalance();
+            }
+          }
+          // Reset bets when new betting round starts
+          if (newPhase === "betting" && prevPhase === "result") {
+            setMyBets(FOOD_ITEMS.map(() => 0));
+            setCurrentWinner(null);
+            setWinAmount(0);
+            setTotalLost(0);
+          }
+          prevPhaseRef.current = newPhase;
         }
-        return prev - 1;
-      });
-    }, 1000);
-  }, []);
 
-  const startCountdownPhase = useCallback(() => {
-    setPhase("countdown");
-    setCountdown(3);
-    if (timerRef.current) clearInterval(timerRef.current);
-    timerRef.current = setInterval(() => {
-      setCountdown(prev => {
-        if (prev <= 1) {
-          if (timerRef.current) clearInterval(timerRef.current);
-          startSpinning();
-          return 0;
+        setPhase(newPhase);
+        setCountdown(state.timeLeft);
+        if (newPhase === "result") {
+          setResultTimer(state.timeLeft);
         }
-        if (soundRef.current) playCountdownBeep();
-        return prev - 1;
-      });
-    }, 1000);
-  }, []);
 
-  const startSpinning = useCallback(() => {
-    setPhase("spinning");
-    if (soundRef.current) playSpinSound();
-    // Pick the fruit with the least total bets (user + fake bets)
-    const bets = userBetsRef.current;
-    const totalBetsPerFruit = FOOD_ITEMS.map((_, i) => bets[i] + fakeBetCounts[i]);
-    const minBet = Math.min(...totalBetsPerFruit);
-    // Get all fruits tied at minimum, pick randomly among them
-    const minFruits = totalBetsPerFruit.map((b, i) => b === minBet ? i : -1).filter(i => i !== -1);
-    const winnerIdx = minFruits[Math.floor(Math.random() * minFruits.length)];
-    const extraSpins = 4 + Math.floor(Math.random() * 3);
-    const targetAngle = totalRotationRef.current + (extraSpins * 360) + (360 - (winnerIdx * 45));
-    totalRotationRef.current = targetAngle;
-    setWheelAngle(targetAngle);
-
-    setTimeout(() => {
-      const won = FOOD_ITEMS[winnerIdx];
-      if (soundRef.current) playResultReveal();
-      setCurrentWinner({ item: won, index: winnerIdx });
-      setResults(prev => [won.emoji, ...prev].slice(0, 12));
-      setTodayRound(prev => prev + 1);
-
-      const bets = userBetsRef.current;
-      const totalBet = bets.reduce((a, b) => a + b, 0);
-
-      if (totalBet > 0) {
-        const betOnWinner = bets[winnerIdx];
-        if (betOnWinner > 0) {
-          const amount = betOnWinner * won.multiplier;
-          const lostOnOthers = totalBet - betOnWinner;
-          const netProfit = amount - lostOnOthers;
-          setWinAmount(amount);
-          setTotalLost(lostOnOthers);
-          // Win goes to winning pool, not wallet
-          setTodayProfits(p => p + netProfit);
-          if (soundRef.current) playWinSound();
-          // Report win to backend
-          reportGameResult({ betAmount: totalBet, winAmount: amount, currency: activeWallet, game: "greedy-king" })
-            .then(() => { setLocalDollarAdj(0); setLocalStarAdj(0); refreshBalance(); }).catch(console.error);
-        } else {
-          setWinAmount(0);
-          setTotalLost(totalBet);
-          setTodayProfits(p => p - totalBet);
-          if (soundRef.current) playLoseSound();
-          // Report loss to backend
-          reportGameResult({ betAmount: totalBet, winAmount: 0, currency: activeWallet, game: "greedy-king" })
-            .then(() => { setLocalDollarAdj(0); setLocalStarAdj(0); refreshBalance(); }).catch(console.error);
+        // Also fetch my bets if round changed
+        if (state.roundNumber !== prevRoundRef.current) {
+          prevRoundRef.current = state.roundNumber;
+          if (userId !== "demo") {
+            try {
+              const myBetsData = await fetchMyGreedyKingBets(userId, activeWallet);
+              setMyBets(myBetsData.myBets);
+            } catch { /* ignore */ }
+          }
         }
-      } else {
-        setWinAmount(0);
-        setTotalLost(0);
+      } catch (err) {
+        console.error("Failed to poll game state:", err);
       }
+    };
 
-      showResult();
-    }, 4000);
-  }, []);
+    pollState();
+    const interval = setInterval(pollState, 1000);
+    return () => clearInterval(interval);
+  }, [activeWallet]);
 
-  const showResult = useCallback(() => {
-    setPhase("result");
-    setResultTimer(4);
-    if (timerRef.current) clearInterval(timerRef.current);
-    timerRef.current = setInterval(() => {
-      setResultTimer(prev => {
-        if (prev <= 1) {
-          if (timerRef.current) clearInterval(timerRef.current);
-          startBettingPhase();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-  }, [startBettingPhase]);
-
-  const betOnFruitClick = (fruitIndex: number) => {
+  const betOnFruitClick = async (fruitIndex: number) => {
     if (phase !== "betting") return;
     const currentBalance = activeWallet === "dollar" ? gameDollarBalance : gameStarBalance;
-    if (currentBalance < selectedBet) return;
-    if (activeWallet === "dollar") {
-      setLocalDollarAdj(prev => prev - selectedBet);
-    } else {
-      setLocalStarAdj(prev => prev - selectedBet);
+    // Account for bets already placed this round (not yet reflected in server balance)
+    const pendingBets = myBets.reduce((a, b) => a + b, 0);
+    if (currentBalance - pendingBets < selectedBet) return;
+
+    try {
+      await placeGreedyKingBet({
+        userId,
+        fruitIndex,
+        amount: selectedBet,
+        currency: activeWallet,
+        firstName,
+      });
+
+      setMyBets(prev => {
+        const copy = [...prev];
+        copy[fruitIndex] += selectedBet;
+        return copy;
+      });
+
+      refreshBalance();
+      if (soundRef.current) playBetSound();
+    } catch (err: any) {
+      console.error("Bet failed:", err.message);
     }
-    setUserBets(prev => {
-      const copy = [...prev];
-      copy[fruitIndex] += selectedBet;
-      return copy;
-    });
-    if (soundRef.current) playBetSound();
   };
 
   const topBarItems = [
@@ -252,9 +234,16 @@ const GreedyKingGame = () => {
             </button>
           ))}
         </div>
-        <div className="rounded-lg px-3 py-1.5 text-right" style={{ background: "hsla(0, 0%, 100%, 0.85)" }}>
-          <p className="text-[10px] leading-tight" style={{ color: "hsl(0, 0%, 50%)" }}>Today's</p>
-          <p className="font-bold text-sm leading-tight" style={{ color: "hsl(0, 0%, 20%)" }}>{todayRound} Round</p>
+        <div className="flex items-center gap-2">
+          {/* Online players */}
+          <div className="rounded-lg px-2 py-1.5 flex items-center gap-1" style={{ background: "hsla(140, 60%, 45%, 0.9)" }}>
+            <Users className="h-3 w-3 text-white" />
+            <span className="text-xs font-bold text-white">{totalPlayers}</span>
+          </div>
+          <div className="rounded-lg px-3 py-1.5 text-right" style={{ background: "hsla(0, 0%, 100%, 0.85)" }}>
+            <p className="text-[10px] leading-tight" style={{ color: "hsl(0, 0%, 50%)" }}>Round</p>
+            <p className="font-bold text-sm leading-tight" style={{ color: "hsl(0, 0%, 20%)" }}>{todayRound}</p>
+          </div>
         </div>
       </div>
 
@@ -283,10 +272,13 @@ const GreedyKingGame = () => {
               const r = 115;
               const x = 150 + r * Math.cos(angle);
               const y = 150 + r * Math.sin(angle);
-              const myBet = userBets[i];
+              const myBet = myBets[i];
               const hasBetOnThis = myBet > 0;
+              const fruitBet = fruitBets[i];
+              const otherBets = fruitBet ? fruitBet.totalAmount - myBet : 0;
               const currentBal = activeWallet === "dollar" ? gameDollarBalance : gameStarBalance;
-              const canBet = phase === "betting" && currentBal >= selectedBet;
+              const pendingBets = myBets.reduce((a, b) => a + b, 0);
+              const canBet = phase === "betting" && (currentBal - pendingBets) >= selectedBet;
 
               return (
                 <div key={i} className="absolute flex flex-col items-center"
@@ -301,7 +293,7 @@ const GreedyKingGame = () => {
                     disabled={!canBet}
                     className="w-16 h-16 rounded-full border-[3px] flex flex-col items-center justify-center shadow-md transition-all relative"
                     style={{
-                      borderColor: hasBetOnThis ? "hsl(220, 70%, 55%)" : "hsl(220, 70%, 55%)",
+                      borderColor: hasBetOnThis ? "hsl(220, 70%, 55%)" : (fruitBet && fruitBet.totalAmount > 0 ? "hsl(45, 70%, 55%)" : "hsl(220, 70%, 55%)"),
                       background: hasBetOnThis
                         ? "linear-gradient(180deg, hsla(30, 80%, 85%, 1) 0%, hsla(30, 70%, 75%, 1) 100%)"
                         : "white",
@@ -309,7 +301,6 @@ const GreedyKingGame = () => {
                     }}
                   >
                     <span className={hasBetOnThis ? "text-base" : "text-xl"}>{food.emoji}</span>
-                    {/* Show user's bet amount inside the circle */}
                     {hasBetOnThis && (
                       <div className="flex items-center gap-0.5 mt-[-2px]">
                         <span className="text-[7px] font-bold" style={{ color: "hsl(0, 60%, 45%)" }}>You:</span>
@@ -317,14 +308,29 @@ const GreedyKingGame = () => {
                         <span className="text-[8px] font-bold" style={{ color: "hsl(35, 80%, 40%)" }}>{myBet}</span>
                       </div>
                     )}
+                    {/* Show other players' bets count */}
+                    {fruitBet && fruitBet.playerCount > 0 && (
+                      <div className="absolute -top-2 -right-2 w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-bold text-white"
+                        style={{ background: "hsl(210, 70%, 50%)" }}>
+                        {fruitBet.playerCount}
+                      </div>
+                    )}
                   </button>
-                  {/* Win multiplier label */}
                   <span className="text-[8px] font-bold mt-0.5 px-1.5 rounded-full whitespace-nowrap" style={{
                     background: hasBetOnThis ? "hsla(30, 80%, 85%, 0.95)" : "hsla(210, 80%, 90%, 0.9)",
                     color: hasBetOnThis ? "hsl(0, 60%, 40%)" : "hsl(210, 60%, 30%)",
                   }}>
                     Win {food.multiplier}X
                   </span>
+                  {/* Show total pool on this fruit */}
+                  {fruitBet && fruitBet.totalAmount > 0 && (
+                    <span className="text-[7px] font-semibold mt-0.5 px-1 rounded-full" style={{
+                      background: "hsla(45, 80%, 55%, 0.9)",
+                      color: "hsl(30, 60%, 25%)",
+                    }}>
+                      💰{fruitBet.totalAmount}
+                    </span>
+                  )}
                   {i === 0 && (
                     <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-white text-[7px] font-bold px-1.5 rounded-full" style={{ background: "hsl(0, 70%, 50%)" }}>
                       Hot
@@ -382,7 +388,7 @@ const GreedyKingGame = () => {
             <Diamond className="h-3 w-3 text-primary" />
             <span className="font-bold text-sm" style={{ color: "hsl(0, 0%, 15%)" }}>{totalUserBet}</span>
             <span className="text-[10px]" style={{ color: "hsl(0, 0%, 50%)" }}>
-              on {userBets.filter(b => b > 0).length} fruit{userBets.filter(b => b > 0).length > 1 ? "s" : ""}
+              on {myBets.filter(b => b > 0).length} fruit{myBets.filter(b => b > 0).length > 1 ? "s" : ""}
             </span>
           </div>
         )}
@@ -391,6 +397,16 @@ const GreedyKingGame = () => {
           <p className="mt-2 text-sm font-bold text-center" style={{ color: "hsl(0, 0%, 25%)" }}>
             👆 Tap fruits to place bets!
           </p>
+        )}
+
+        {/* Live players indicator */}
+        {totalPlayers > 0 && (
+          <div className="mt-2 flex items-center gap-1.5 rounded-full px-3 py-1" style={{ background: "hsla(140, 50%, 45%, 0.15)" }}>
+            <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: "hsl(140, 60%, 45%)" }} />
+            <span className="text-[10px] font-semibold" style={{ color: "hsl(140, 40%, 30%)" }}>
+              {totalPlayers} player{totalPlayers > 1 ? "s" : ""} in this round
+            </span>
+          </div>
         )}
 
         {/* Category buttons */}
@@ -453,7 +469,7 @@ const GreedyKingGame = () => {
           </div>
           <button
             onClick={() => {
-              const hasBet = userBets.some(b => b > 0);
+              const hasBet = myBets.some(b => b > 0);
               if (phase !== "betting" || hasBet) return;
               setActiveWallet(prev => prev === "dollar" ? "star" : "dollar");
             }}
@@ -461,7 +477,7 @@ const GreedyKingGame = () => {
             style={{
               background: "hsla(0, 0%, 100%, 0.95)",
               borderColor: "hsl(45, 80%, 55%)",
-              opacity: (phase !== "betting" || userBets.some(b => b > 0)) ? 0.4 : 1,
+              opacity: (phase !== "betting" || myBets.some(b => b > 0)) ? 0.4 : 1,
             }}
           >
             <span className="text-xs">🔄</span>
@@ -527,14 +543,14 @@ const GreedyKingGame = () => {
               </div>
 
               <p className="text-center text-sm font-semibold" style={{ color: "hsl(0, 0%, 30%)" }}>
-                The {todayRound} round's result: {currentWinner.item.emoji}
+                Round {todayRound} result: {currentWinner.item.emoji}
               </p>
 
               {hasBet ? (
                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
                   {winAmount > 0 ? (
                     <p className="text-center font-bold text-lg mt-1" style={{ color: "hsl(140, 60%, 35%)" }}>
-                      🎉 You won {winAmount} gems! (bet {userBets[currentWinner.index]} on {currentWinner.item.emoji})
+                      🎉 You won {winAmount} gems! (bet {myBets[currentWinner.index]} on {currentWinner.item.emoji})
                     </p>
                   ) : (
                     <p className="text-center font-bold text-lg mt-1" style={{ color: "hsl(0, 60%, 45%)" }}>
@@ -548,28 +564,33 @@ const GreedyKingGame = () => {
                 </p>
               )}
 
+              {/* Show top bettors from server data */}
               <div className="flex items-center gap-3 mt-4 mb-3">
-              <div className="flex-1 h-px" style={{ background: "hsl(0, 0%, 85%)" }} />
-              <span className="text-xs" style={{ color: "hsl(0, 0%, 55%)" }}>Leaderboard - Top Winners</span>
-              <div className="flex-1 h-px" style={{ background: "hsl(0, 0%, 85%)" }} />
+                <div className="flex-1 h-px" style={{ background: "hsl(0, 0%, 85%)" }} />
+                <span className="text-xs" style={{ color: "hsl(0, 0%, 55%)" }}>Top Players This Round</span>
+                <div className="flex-1 h-px" style={{ background: "hsl(0, 0%, 85%)" }} />
               </div>
 
               {(() => {
-                // Build leaderboard: fake players + user
-                const userTotalBet = userBets.reduce((a, b) => a + b, 0);
-                const walletPlayers = activeWallet === "dollar" ? DOLLAR_PLAYERS : STAR_PLAYERS;
-                const leaderboard = walletPlayers.slice(0, 5).map((name) => ({
-                  name,
-                  wallet: activeWallet,
-                  amount: Math.floor(Math.random() * 500) + 50,
-                }));
-                leaderboard.push({
-                  name: "You",
-                  wallet: activeWallet,
-                  amount: winAmount > 0 ? winAmount : 0,
+                // Show actual players from fruit bets
+                const allPlayers: { name: string; amount: number }[] = [];
+                fruitBets.forEach((fb, fi) => {
+                  if (fi === currentWinner.index) {
+                    fb.players.forEach(p => {
+                      allPlayers.push({ name: p.name, amount: p.amount * currentWinner.item.multiplier });
+                    });
+                  }
                 });
-                leaderboard.sort((a, b) => b.amount - a.amount);
-                const top3 = leaderboard.slice(0, 3);
+                // Add user
+                if (winAmount > 0) {
+                  allPlayers.push({ name: "You", amount: winAmount });
+                }
+                allPlayers.sort((a, b) => b.amount - a.amount);
+                const top3 = allPlayers.slice(0, 3);
+
+                if (top3.length === 0) {
+                  return <p className="text-center text-xs" style={{ color: "hsl(0, 0%, 55%)" }}>No winners this round</p>;
+                }
 
                 return (
                   <div className="flex items-start justify-center gap-6">
@@ -586,7 +607,7 @@ const GreedyKingGame = () => {
                         </div>
                         <p className="text-xs font-semibold mt-1.5 text-center max-w-[70px] truncate" style={{ color: "hsl(0, 0%, 25%)" }}>{player.name}</p>
                         <div className="flex items-center gap-0.5 mt-0.5">
-                          <span className="text-xs">{player.wallet === "dollar" ? "💲" : "⭐"}</span>
+                          <span className="text-xs">{activeWallet === "dollar" ? "💲" : "⭐"}</span>
                           <span className="text-[10px] font-bold" style={{ color: "hsl(35, 90%, 45%)" }}>{player.amount}</span>
                         </div>
                       </motion.div>
