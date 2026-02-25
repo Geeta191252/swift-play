@@ -8,7 +8,7 @@ import { reportGameResult } from "@/lib/telegram";
 
 const GRID_SIZE = 5;
 const TOTAL_CELLS = GRID_SIZE * GRID_SIZE;
-const MINE_OPTIONS = [3, 5, 7, 10, 15];
+const MINE_OPTIONS = [1, 3, 5, 7, 10, 15];
 const BET_PRESETS = [1, 3, 5, 10, 50];
 
 type CellState = "hidden" | "safe" | "mine" | "revealed-mine";
