@@ -225,22 +225,49 @@ export const reportGameResult = async (data: {
  * Process referral if user opened app via invite link
  */
 export const processReferral = async (): Promise<void> => {
+  // Wait for Telegram WebApp to be fully ready
+  await new Promise((resolve) => setTimeout(resolve, 500));
+
   const tg = getTelegram();
-  if (!tg) return;
+  if (!tg) {
+    console.log("Referral: No Telegram WebApp found");
+    return;
+  }
+
+  // Call ready() to ensure WebApp is initialized
+  try { tg.ready(); } catch (_) {}
 
   const userId = tg.initDataUnsafe?.user?.id;
   const startParam = tg.initDataUnsafe?.start_param;
 
-  if (!userId || !startParam || !startParam.startsWith("ref_")) return;
+  console.log("Referral check:", { userId, startParam, initDataUnsafe: JSON.stringify(tg.initDataUnsafe) });
+
+  if (!userId || !startParam) {
+    console.log("Referral: No userId or start_param");
+    return;
+  }
+
+  // Support both "ref_123" format
+  if (!startParam.startsWith("ref_")) {
+    console.log("Referral: start_param doesn't start with ref_:", startParam);
+    return;
+  }
 
   const referrerId = startParam.replace("ref_", "");
-  if (!referrerId || referrerId === String(userId)) return;
+  if (!referrerId || referrerId === String(userId)) {
+    console.log("Referral: Invalid referrerId or self-referral");
+    return;
+  }
 
-  // Check if already processed this session
-  const key = `referral_processed_${userId}`;
-  if (sessionStorage.getItem(key)) return;
+  // Check if already processed - use localStorage to persist across sessions
+  const key = `referral_processed_${userId}_${referrerId}`;
+  if (localStorage.getItem(key)) {
+    console.log("Referral: Already processed");
+    return;
+  }
 
   try {
+    console.log("Referral: Sending to backend", { userId, referrerId });
     const res = await fetch(`${API_BASE_URL}/referral`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -248,8 +275,11 @@ export const processReferral = async (): Promise<void> => {
     });
 
     const data = await res.json();
-    sessionStorage.setItem(key, "true");
     console.log("Referral result:", data);
+    
+    if (data.success || data.message === "Already referred") {
+      localStorage.setItem(key, "true");
+    }
   } catch (err) {
     console.error("Referral processing error:", err);
   }
