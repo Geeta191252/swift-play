@@ -526,20 +526,20 @@ app.post("/api/referral", async (req, res) => {
     referrer.referralCount = (referrer.referralCount || 0) + 1;
     const count = referrer.referralCount;
 
-    // Reward: 10 Stars per referral
+    // Reward: $10 per referral
     let reward = 10;
 
-    referrer.starBalance = (referrer.starBalance || 0) + reward;
+    referrer.dollarBalance = (referrer.dollarBalance || 0) + reward;
     await referrer.save();
 
     // Log reward transaction
     await Transaction.create({
       telegramId: numericReferrerId,
       type: "referral",
-      currency: "star",
+      currency: "dollar",
       amount: reward,
       status: "completed",
-      description: `Referral reward: ${reward} ⭐ (referred user ${numericUserId})`,
+      description: `Referral reward: $${reward} (referred user ${numericUserId})`,
     });
 
     // Notify referrer
@@ -547,7 +547,7 @@ app.post("/api/referral", async (req, res) => {
       await bot.sendMessage(numericReferrerId,
         `🎉 *New Referral!*\n\n` +
         `👤 A friend joined using your link!\n` +
-        `💰 You earned ${reward} ⭐!\n` +
+        `💰 You earned $${reward}!\n` +
         `📊 Total referrals: ${count}`,
         { parse_mode: "Markdown" }
       );
@@ -786,16 +786,16 @@ app.post("/api/telegram-webhook", async (req, res) => {
               referrer.referralCount = (referrer.referralCount || 0) + 1;
               const count = referrer.referralCount;
               const reward = 10;
-              referrer.starBalance = (referrer.starBalance || 0) + reward;
+              referrer.dollarBalance = (referrer.dollarBalance || 0) + reward;
               await referrer.save();
 
               await Transaction.create({
                 telegramId: numericReferrerId,
                 type: "referral",
-                currency: "star",
+                currency: "dollar",
                 amount: reward,
                 status: "completed",
-                description: `Referral reward: ${reward} ⭐ (referred user ${numericUserId})`,
+                description: `Referral reward: $${reward} (referred user ${numericUserId})`,
               });
 
               // Notify referrer
@@ -803,7 +803,7 @@ app.post("/api/telegram-webhook", async (req, res) => {
                 await bot.sendMessage(numericReferrerId,
                   `🎉 *New Referral!*\n\n` +
                   `👤 ${firstName} joined using your link!\n` +
-                  `💰 You earned ${reward} ⭐!\n` +
+                  `💰 You earned $${reward}!\n` +
                   `📊 Total referrals: ${count}`,
                   { parse_mode: "Markdown" }
                 );
