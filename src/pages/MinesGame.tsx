@@ -8,19 +8,20 @@ import { reportGameResult } from "@/lib/telegram";
 
 const GRID_SIZE = 5;
 const TOTAL_CELLS = GRID_SIZE * GRID_SIZE;
-const MINE_OPTIONS = [1, 3, 5, 7, 10];
+const MINE_OPTIONS = [3, 5, 7, 10, 15];
 const BET_PRESETS = [1, 3, 5, 10, 50];
 
 type CellState = "hidden" | "safe" | "mine" | "revealed-mine";
 type GamePhase = "betting" | "playing" | "lost" | "cashed";
 
 const getMultiplier = (safePicks: number, totalMines: number): number => {
-  // House-edge multiplier calculation
-  let mult = 1;
-  for (let i = 0; i < safePicks; i++) {
-    mult *= (TOTAL_CELLS - i) / (TOTAL_CELLS - totalMines - i);
-  }
-  return Math.floor(mult * 97) / 100; // 3% house edge
+  // Heavy house-edge: multipliers stay low (1.1x, 1.2x, 1.5x range)
+  // Base increment per safe pick is very small
+  const riskFactor = totalMines / TOTAL_CELLS; // 0.04 to 0.4
+  const increment = 0.05 + riskFactor * 0.15; // 0.056 to 0.11 per pick
+  const mult = 1 + safePicks * increment;
+  // Cap multiplier to keep it low
+  return Math.floor(mult * 100) / 100;
 };
 
 const MinesGame = () => {
