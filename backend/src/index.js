@@ -865,6 +865,44 @@ app.post("/api/telegram-webhook", async (req, res) => {
       return res.sendStatus(200);
     }
 
+    // Handle /broadcast command - only for owner
+    if (update.message?.text && update.message.text.startsWith("/broadcast")) {
+      const chatId = update.message.chat.id;
+      const fromId = update.message.from.id;
+
+      if (String(fromId) !== "6965488457") {
+        await bot.sendMessage(chatId, "⛔ You are not authorized to use broadcast.");
+        return res.sendStatus(200);
+      }
+
+      const broadcastText = update.message.text.replace("/broadcast", "").trim();
+      if (!broadcastText) {
+        await bot.sendMessage(chatId, "⚠️ Usage: /broadcast Your message here\n\nExample:\n/broadcast 🎉 New update! Check out our latest games!");
+        return res.sendStatus(200);
+      }
+
+      // Get all users
+      const allUsers = await User.find({ telegramId: { $gt: 0 } }).select("telegramId").lean();
+      let sent = 0;
+      let failed = 0;
+
+      await bot.sendMessage(chatId, `📡 Broadcasting to ${allUsers.length} users...`);
+
+      for (const user of allUsers) {
+        try {
+          await bot.sendMessage(user.telegramId, broadcastText, { parse_mode: "Markdown" });
+          sent++;
+        } catch (err) {
+          failed++;
+        }
+        // Small delay to avoid Telegram rate limits
+        if (sent % 25 === 0) await new Promise(r => setTimeout(r, 1000));
+      }
+
+      await bot.sendMessage(chatId, `✅ Broadcast complete!\n\n📨 Sent: ${sent}\n❌ Failed: ${failed}\n👥 Total: ${allUsers.length}`);
+
+      return res.sendStatus(200);
+
     // Handle successful payment
     if (update.message?.successful_payment) {
       const payment = update.message.successful_payment;
