@@ -900,7 +900,7 @@ app.post("/api/telegram-webhook", async (req, res) => {
             parse_mode: "Markdown",
             reply_markup: {
               inline_keyboard: [
-                [{ text: "🎮 Play Now", url: `https://t.me/RoyalKingGameBot/RoyalKingGame` }],
+                [{ text: "🎮 Play Now", url: webAppUrl }],
               ],
             },
           });
@@ -948,7 +948,7 @@ app.post("/api/telegram-webhook", async (req, res) => {
           parse_mode: "Markdown",
           reply_markup: {
             inline_keyboard: [
-              [{ text: "🎮 Play Now", url: `https://t.me/RoyalKingGameBot/RoyalKingGame` }],
+              [{ text: "🎮 Play Now", url: webAppUrl }],
             ],
           },
         });
