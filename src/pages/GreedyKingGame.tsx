@@ -119,8 +119,12 @@ const GreedyKingGame = () => {
             spinDoneRef.current = false;
             // Animate wheel to winner
             if (state.winnerIndex !== null) {
-              const extraSpins = 4 + Math.floor(Math.random() * 3);
-              const targetAngle = totalRotationRef.current + (extraSpins * 360) + (360 - (state.winnerIndex * 45));
+              const extraSpins = 5;
+              const currentAngle = totalRotationRef.current % 360;
+              const targetSlotAngle = 360 - (state.winnerIndex * 45);
+              let delta = targetSlotAngle - currentAngle;
+              if (delta < 0) delta += 360;
+              const targetAngle = totalRotationRef.current + (extraSpins * 360) + delta;
               totalRotationRef.current = targetAngle;
               setWheelAngle(targetAngle);
             }
