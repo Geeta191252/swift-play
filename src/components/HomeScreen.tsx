@@ -13,6 +13,7 @@ import greedyKingThumb from "@/assets/greedy-king-thumb.png";
 import gameDice from "@/assets/game-dice.jpg";
 import gameCarnivalSpin from "@/assets/game-carnival-spin.jpg";
 import gameMines from "@/assets/game-mines.jpg";
+import homeBg from "@/assets/home-bg.png";
 
 interface GameTileProps {
   image: string;
@@ -93,29 +94,38 @@ const HomeScreen = () => {
   };
 
   return (
-    <div className="min-h-screen pb-20" style={{
-      background: "linear-gradient(160deg, hsl(265 60% 22%) 0%, hsl(280 50% 15%) 30%, hsl(300 40% 10%) 60%, hsl(260 55% 12%) 100%)",
-    }}>
-      {/* Animated background orbs */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-        <motion.div
-          animate={{ x: [0, 30, -20, 0], y: [0, -20, 15, 0], scale: [1, 1.2, 0.9, 1] }}
-          transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute top-10 right-10 w-40 h-40 rounded-full"
-          style={{ background: "radial-gradient(circle, hsla(280, 70%, 50%, 0.15), transparent 70%)" }}
-        />
-        <motion.div
-          animate={{ x: [0, -25, 20, 0], y: [0, 25, -10, 0], scale: [1, 0.8, 1.1, 1] }}
-          transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute bottom-40 left-5 w-60 h-60 rounded-full"
-          style={{ background: "radial-gradient(circle, hsla(45, 80%, 50%, 0.1), transparent 70%)" }}
-        />
-        <motion.div
-          animate={{ x: [0, 15, -15, 0], y: [0, -30, 20, 0] }}
-          transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute top-1/2 right-0 w-32 h-32 rounded-full"
-          style={{ background: "radial-gradient(circle, hsla(200, 80%, 55%, 0.12), transparent 70%)" }}
-        />
+    <div className="min-h-screen pb-20 relative">
+      {/* Background image */}
+      <div className="fixed inset-0 z-0">
+        <img src={homeBg} alt="" className="w-full h-full object-cover" />
+        <div className="absolute inset-0" style={{
+          background: "linear-gradient(180deg, hsla(280, 60%, 10%, 0.7) 0%, hsla(300, 50%, 8%, 0.6) 50%, hsla(260, 55%, 12%, 0.8) 100%)",
+        }} />
+      </div>
+
+      {/* Animated sparkle particles */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none z-[1]">
+        {[...Array(6)].map((_, i) => (
+          <motion.div
+            key={i}
+            animate={{
+              y: [0, -20, 10, 0],
+              x: [0, 10, -10, 0],
+              opacity: [0.3, 0.8, 0.3],
+              scale: [0.8, 1.2, 0.8],
+            }}
+            transition={{ duration: 3 + i, repeat: Infinity, delay: i * 0.5 }}
+            className="absolute rounded-full"
+            style={{
+              width: `${4 + i * 2}px`,
+              height: `${4 + i * 2}px`,
+              top: `${15 + i * 14}%`,
+              left: `${10 + i * 15}%`,
+              background: `radial-gradient(circle, hsla(${40 + i * 30}, 90%, 70%, 0.8), transparent)`,
+              boxShadow: `0 0 ${8 + i * 3}px hsla(${40 + i * 30}, 90%, 60%, 0.5)`,
+            }}
+          />
+        ))}
       </div>
 
       {/* Top Bar */}
