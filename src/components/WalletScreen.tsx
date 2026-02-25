@@ -734,7 +734,7 @@ const WalletScreen = () => {
         <div className="space-y-2">
         {transactions.map((tx: any, i: number) => {
             const isCancelled = tx.status === "failed" || tx.status === "refunded";
-            const isPositive = !isCancelled && (tx.type === "win" || tx.type === "bonus" || tx.type === "deposit" || tx.type === "ton_deposit");
+            const isPositive = !isCancelled && (tx.type === "win" || tx.type === "bonus" || tx.type === "deposit" || tx.type === "ton_deposit" || tx.type === "referral");
             const isTonTx = tx.type === "ton_deposit" || tx.type === "ton_withdraw";
             const isStarTx = tx.currency === "star";
             const currencySymbol = isStarTx ? "⭐" : "$";
