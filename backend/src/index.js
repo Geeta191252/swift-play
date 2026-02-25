@@ -274,6 +274,9 @@ app.post("/api/balance", async (req, res) => {
     if (!userId) return res.status(400).json({ error: "Missing userId" });
 
     const user = await getOrCreateUser(userId);
+    // Update lastActive timestamp
+    user.lastActive = new Date();
+    await user.save();
     return res.json({
       dollarBalance: user.dollarBalance,
       starBalance: user.starBalance,
@@ -469,7 +472,7 @@ app.post("/api/admin/users", async (req, res) => {
       return res.status(403).json({ error: "Unauthorized" });
     }
 
-    const users = await User.find({}).sort({ createdAt: -1 }).lean();
+    const users = await User.find({}).sort({ createdAt: -1 }).select('telegramId username firstName lastName dollarBalance starBalance dollarWinning starWinning lastActive createdAt').lean();
 
     // Get pending withdrawal requests (include _id for approve/reject)
     const withdrawals = await Transaction.find({ type: "withdraw", status: "pending" })

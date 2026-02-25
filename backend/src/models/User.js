@@ -36,6 +36,10 @@ const userSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    lastActive: {
+      type: Date,
+      default: Date.now,
+    },
     username: String,
     firstName: String,
     lastName: String,

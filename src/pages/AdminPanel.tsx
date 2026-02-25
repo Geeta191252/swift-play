@@ -31,6 +31,7 @@ interface UserData {
   starBalance: number;
   dollarWinning: number;
   starWinning: number;
+  lastActive?: string;
   createdAt: string;
 }
 
@@ -279,55 +280,124 @@ const AdminPanel = () => {
 
           {/* Users Tab */}
           {activeTab === "users" && (
-            <div className="space-y-2">
-              <p className="text-xs mb-2" style={{ color: "hsl(0 0% 50%)" }}>{users.length} total users</p>
-              <div className="space-y-2 max-h-[600px] overflow-y-auto">
-                {users.map((u, i) => (
-                  <motion.div key={u.telegramId} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}
-                    className="rounded-xl p-3" style={{ background: "hsla(260, 40%, 25%, 0.6)", border: "1px solid hsla(260, 40%, 40%, 0.2)" }}>
-                    <div className="flex items-center gap-2 mb-2">
-                      <User className="h-4 w-4" style={{ color: "hsl(45 80% 65%)" }} />
-                      <span className="text-xs font-bold" style={{ color: "hsl(0 0% 90%)" }}>
-                        {u.firstName || u.username || "Unknown"}
-                        {u.lastName ? ` ${u.lastName}` : ""}
-                      </span>
-                      {u.username && (
-                        <span className="text-[10px]" style={{ color: "hsl(200 70% 60%)" }}>@{u.username}</span>
+            <div className="space-y-3">
+              {/* Active / Offline summary */}
+              {(() => {
+                const now = Date.now();
+                const FIVE_MIN = 5 * 60 * 1000;
+                const activeUsers = users.filter(u => u.lastActive && (now - new Date(u.lastActive).getTime()) < FIVE_MIN);
+                const offlineUsers = users.filter(u => !u.lastActive || (now - new Date(u.lastActive).getTime()) >= FIVE_MIN);
+                return (
+                  <>
+                    {/* Summary bar */}
+                    <div className="flex gap-3 mb-1">
+                      <div className="flex-1 rounded-xl p-3 flex items-center gap-2" style={{
+                        background: "linear-gradient(135deg, hsla(120, 70%, 40%, 0.25), hsla(140, 60%, 35%, 0.15))",
+                        border: "1px solid hsla(120, 70%, 45%, 0.4)",
+                      }}>
+                        <div className="w-3 h-3 rounded-full animate-pulse" style={{ background: "hsl(120 70% 50%)", boxShadow: "0 0 8px hsl(120 70% 50%)" }} />
+                        <div>
+                          <p className="text-lg font-bold" style={{ color: "hsl(120 70% 65%)" }}>{activeUsers.length}</p>
+                          <p className="text-[10px] font-bold" style={{ color: "hsl(120 50% 55%)" }}>Active Now</p>
+                        </div>
+                      </div>
+                      <div className="flex-1 rounded-xl p-3 flex items-center gap-2" style={{
+                        background: "linear-gradient(135deg, hsla(0, 0%, 50%, 0.15), hsla(0, 0%, 40%, 0.1))",
+                        border: "1px solid hsla(0, 0%, 50%, 0.3)",
+                      }}>
+                        <div className="w-3 h-3 rounded-full" style={{ background: "hsl(0 0% 45%)" }} />
+                        <div>
+                          <p className="text-lg font-bold" style={{ color: "hsl(0 0% 65%)" }}>{offlineUsers.length}</p>
+                          <p className="text-[10px] font-bold" style={{ color: "hsl(0 0% 50%)" }}>Offline</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <p className="text-xs" style={{ color: "hsl(0 0% 50%)" }}>{users.length} total users</p>
+                    <div className="space-y-2 max-h-[600px] overflow-y-auto">
+                      {users.map((u, i) => {
+                        const isActive = u.lastActive && (now - new Date(u.lastActive).getTime()) < FIVE_MIN;
+                        const lastSeenText = u.lastActive
+                          ? (() => {
+                              const diff = now - new Date(u.lastActive).getTime();
+                              if (diff < 60000) return "Just now";
+                              if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+                              if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
+                              return `${Math.floor(diff / 86400000)}d ago`;
+                            })()
+                          : "Never";
+                        return (
+                          <motion.div key={u.telegramId} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}
+                            className="rounded-xl p-3" style={{
+                              background: "hsla(260, 40%, 25%, 0.6)",
+                              border: isActive
+                                ? "1px solid hsla(120, 70%, 45%, 0.4)"
+                                : "1px solid hsla(260, 40%, 40%, 0.2)",
+                            }}>
+                            <div className="flex items-center gap-2 mb-2">
+                              {/* Online/Offline dot */}
+                              <div className="relative">
+                                <User className="h-4 w-4" style={{ color: "hsl(45 80% 65%)" }} />
+                                <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2"
+                                  style={{
+                                    background: isActive ? "hsl(120 70% 50%)" : "hsl(0 0% 45%)",
+                                    borderColor: "hsl(260 40% 25%)",
+                                    boxShadow: isActive ? "0 0 6px hsl(120 70% 50%)" : "none",
+                                  }}
+                                />
+                              </div>
+                              <span className="text-xs font-bold" style={{ color: "hsl(0 0% 90%)" }}>
+                                {u.firstName || u.username || "Unknown"}
+                                {u.lastName ? ` ${u.lastName}` : ""}
+                              </span>
+                              {u.username && (
+                                <span className="text-[10px]" style={{ color: "hsl(200 70% 60%)" }}>@{u.username}</span>
+                              )}
+                              {/* Status badge */}
+                              <span className="ml-auto text-[9px] px-2 py-0.5 rounded-full font-bold" style={{
+                                background: isActive ? "hsla(120, 70%, 45%, 0.2)" : "hsla(0, 0%, 50%, 0.15)",
+                                color: isActive ? "hsl(120 70% 60%)" : "hsl(0 0% 55%)",
+                              }}>
+                                {isActive ? "🟢 Online" : `⚫ ${lastSeenText}`}
+                              </span>
+                            </div>
+                            <p className="text-[10px] font-mono mb-2" style={{ color: "hsl(0 0% 50%)" }}>ID: {u.telegramId}</p>
+                            <div className="grid grid-cols-2 gap-2 mb-2">
+                              <div className="rounded-lg p-2" style={{ background: "hsla(45, 80%, 50%, 0.1)" }}>
+                                <p className="text-[10px]" style={{ color: "hsl(0 0% 50%)" }}>⭐ Star Wallet</p>
+                                <p className="text-sm font-bold" style={{ color: "hsl(45 90% 60%)" }}>
+                                  {(u.starBalance || 0) + (u.starWinning || 0)}
+                                </p>
+                              </div>
+                              <div className="rounded-lg p-2" style={{ background: "hsla(120, 60%, 40%, 0.1)" }}>
+                                <p className="text-[10px]" style={{ color: "hsl(0 0% 50%)" }}>$ Dollar Wallet</p>
+                                <p className="text-sm font-bold" style={{ color: "hsl(120 60% 55%)" }}>
+                                  ${((u.dollarBalance || 0) + (u.dollarWinning || 0)).toFixed(2)}
+                                </p>
+                              </div>
+                            </div>
+                            {/* Fund Adjust Button */}
+                            <button
+                              onClick={() => { setAdjustUser(u); setAdjustAmount(""); setAdjustAction("add"); }}
+                              className="w-full py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5"
+                              style={{
+                                background: "linear-gradient(135deg, hsla(45, 80%, 50%, 0.25), hsla(30, 80%, 50%, 0.25))",
+                                border: "1px solid hsla(45, 80%, 50%, 0.4)",
+                                color: "hsl(45 90% 70%)",
+                              }}
+                            >
+                              <DollarSign className="h-3.5 w-3.5" /> Adjust Fund
+                            </button>
+                          </motion.div>
+                        );
+                      })}
+                      {users.length === 0 && (
+                        <p className="text-center text-sm py-8" style={{ color: "hsl(0 0% 50%)" }}>No users yet</p>
                       )}
                     </div>
-                    <p className="text-[10px] font-mono mb-2" style={{ color: "hsl(0 0% 50%)" }}>ID: {u.telegramId}</p>
-                    <div className="grid grid-cols-2 gap-2 mb-2">
-                      <div className="rounded-lg p-2" style={{ background: "hsla(45, 80%, 50%, 0.1)" }}>
-                        <p className="text-[10px]" style={{ color: "hsl(0 0% 50%)" }}>⭐ Star Wallet</p>
-                        <p className="text-sm font-bold" style={{ color: "hsl(45 90% 60%)" }}>
-                          {(u.starBalance || 0) + (u.starWinning || 0)}
-                        </p>
-                      </div>
-                      <div className="rounded-lg p-2" style={{ background: "hsla(120, 60%, 40%, 0.1)" }}>
-                        <p className="text-[10px]" style={{ color: "hsl(0 0% 50%)" }}>$ Dollar Wallet</p>
-                        <p className="text-sm font-bold" style={{ color: "hsl(120 60% 55%)" }}>
-                          ${((u.dollarBalance || 0) + (u.dollarWinning || 0)).toFixed(2)}
-                        </p>
-                      </div>
-                    </div>
-                    {/* Fund Adjust Button */}
-                    <button
-                      onClick={() => { setAdjustUser(u); setAdjustAmount(""); setAdjustAction("add"); }}
-                      className="w-full py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5"
-                      style={{
-                        background: "linear-gradient(135deg, hsla(45, 80%, 50%, 0.25), hsla(30, 80%, 50%, 0.25))",
-                        border: "1px solid hsla(45, 80%, 50%, 0.4)",
-                        color: "hsl(45 90% 70%)",
-                      }}
-                    >
-                      <DollarSign className="h-3.5 w-3.5" /> Adjust Fund
-                    </button>
-                  </motion.div>
-                ))}
-                {users.length === 0 && (
-                  <p className="text-center text-sm py-8" style={{ color: "hsl(0 0% 50%)" }}>No users yet</p>
-                )}
-              </div>
+                  </>
+                );
+              })()}
             </div>
           )}
 
