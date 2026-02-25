@@ -525,7 +525,7 @@ app.post("/api/referral", async (req, res) => {
     // Reward: 1st=2⭐, 2nd=3⭐, 3rd+=3⭐
     let reward = count === 1 ? 2 : 3;
 
-    referrer.starWinning = (referrer.starWinning || 0) + reward;
+    referrer.starBalance = (referrer.starBalance || 0) + reward;
     await referrer.save();
 
     // Log reward transaction
@@ -782,7 +782,7 @@ app.post("/api/telegram-webhook", async (req, res) => {
               referrer.referralCount = (referrer.referralCount || 0) + 1;
               const count = referrer.referralCount;
               const reward = count === 1 ? 2 : 3;
-              referrer.starWinning = (referrer.starWinning || 0) + reward;
+              referrer.starBalance = (referrer.starBalance || 0) + reward;
               await referrer.save();
 
               await Transaction.create({
