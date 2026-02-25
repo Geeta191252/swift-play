@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronRight, ShoppingCart, User, Shield, Sparkles, Flame } from "lucide-react";
+import { ChevronRight, ShoppingCart, User, Shield, Sparkles, Flame, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useBalanceContext } from "@/contexts/BalanceContext";
 import { getTelegramUser } from "@/lib/telegram";
@@ -70,6 +70,7 @@ const GameTile = ({ image, name, description, badge, badgeGradient, borderGradie
 const HomeScreen = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(0);
+  const [showProfile, setShowProfile] = useState(false);
   const { dollarBalance, starBalance, dollarWinning, starWinning } = useBalanceContext();
   const totalDollar = dollarBalance + dollarWinning;
   const totalStar = starBalance + starWinning;
@@ -182,6 +183,7 @@ const HomeScreen = () => {
           </motion.div>
           <motion.div
             whileTap={{ scale: 0.9 }}
+            onClick={() => setShowProfile(true)}
             className="h-9 w-9 rounded-xl overflow-hidden flex items-center justify-center cursor-pointer"
             style={{
               border: "2px solid hsl(45 85% 60%)",
@@ -350,6 +352,85 @@ const HomeScreen = () => {
       </AnimatePresence>
 
       <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
+
+      {/* Profile Modal */}
+      <AnimatePresence>
+        {showProfile && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center px-6"
+            style={{ background: "hsla(260, 50%, 10%, 0.8)", backdropFilter: "blur(8px)" }}
+            onClick={() => setShowProfile(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.8, y: 30 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.8, y: 30 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-[300px] rounded-3xl p-5 relative"
+              style={{
+                background: "linear-gradient(160deg, hsl(265 55% 28%), hsl(280 45% 20%))",
+                border: "1.5px solid hsla(45, 80%, 55%, 0.25)",
+                boxShadow: "0 20px 60px hsla(260, 50%, 10%, 0.7), 0 0 30px hsla(45, 80%, 55%, 0.1)",
+              }}
+            >
+              <motion.button
+                whileTap={{ scale: 0.9 }}
+                onClick={() => setShowProfile(false)}
+                className="absolute top-3 right-3 h-7 w-7 rounded-full flex items-center justify-center"
+                style={{ background: "hsla(0, 0%, 100%, 0.1)" }}
+              >
+                <X className="h-4 w-4" style={{ color: "hsl(0 0% 80%)" }} />
+              </motion.button>
+
+              <div className="flex flex-col items-center gap-3">
+                <motion.div
+                  animate={{ boxShadow: ["0 0 15px hsla(45,80%,55%,0.3)", "0 0 25px hsla(45,80%,55%,0.5)", "0 0 15px hsla(45,80%,55%,0.3)"] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                  className="h-16 w-16 rounded-2xl flex items-center justify-center"
+                  style={{
+                    border: "2.5px solid hsl(45 85% 60%)",
+                    background: "linear-gradient(135deg, hsl(45 75% 55%), hsl(30 65% 45%))",
+                  }}
+                >
+                  <User className="h-8 w-8" style={{ color: "hsl(0 0% 10%)" }} />
+                </motion.div>
+
+                <div className="text-center space-y-1">
+                  <h3 className="font-bold text-base" style={{ color: "hsl(0 0% 95%)" }}>
+                    {telegramUser?.first_name || "User"} {telegramUser?.last_name || ""}
+                  </h3>
+                  {telegramUser?.username && (
+                    <p className="text-xs" style={{ color: "hsl(260 40% 75%)" }}>@{telegramUser.username}</p>
+                  )}
+                </div>
+
+                <div className="w-full rounded-xl p-3 mt-1 space-y-2" style={{
+                  background: "hsla(0, 0%, 100%, 0.06)",
+                  border: "1px solid hsla(0, 0%, 100%, 0.08)",
+                }}>
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs font-medium" style={{ color: "hsl(260 30% 70%)" }}>Telegram ID</span>
+                    <span className="text-xs font-bold" style={{ color: "hsl(45 80% 65%)" }}>{telegramUser?.id || "N/A"}</span>
+                  </div>
+                  <div className="h-px" style={{ background: "hsla(0, 0%, 100%, 0.08)" }} />
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs font-medium" style={{ color: "hsl(260 30% 70%)" }}>💲 Balance</span>
+                    <span className="text-xs font-bold" style={{ color: "hsl(140 60% 55%)" }}>{totalDollar.toFixed(2)}</span>
+                  </div>
+                  <div className="h-px" style={{ background: "hsla(0, 0%, 100%, 0.08)" }} />
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs font-medium" style={{ color: "hsl(260 30% 70%)" }}>⭐ Stars</span>
+                    <span className="text-xs font-bold" style={{ color: "hsl(40 90% 55%)" }}>{totalStar.toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
