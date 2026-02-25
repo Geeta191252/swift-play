@@ -9,7 +9,7 @@ const transactionSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ["deposit", "withdraw", "bet", "win", "bonus", "convert", "ton_deposit", "ton_withdraw"],
+      enum: ["deposit", "withdraw", "bet", "win", "bonus", "convert", "ton_deposit", "ton_withdraw", "referral"],
       required: true,
     },
     currency: {
