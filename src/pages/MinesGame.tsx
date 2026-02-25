@@ -81,6 +81,10 @@ const MinesGame = () => {
 
   const currentBalance = activeWallet === "dollar" ? gameDollarBalance : gameStarBalance;
 
+  // Track remaining mines to place and revealed safe cells for lazy mine placement
+  const remainingMinesRef = useRef(0);
+  const revealedSafeRef = useRef<Set<number>>(new Set());
+
   const startGame = useCallback(() => {
     if (currentBalance < selectedBet) return;
 
@@ -89,12 +93,10 @@ const MinesGame = () => {
     else setLocalStarAdj(p => p - selectedBet);
     if (soundRef.current) playBetSound();
 
-    // Place mines randomly
-    const mines = new Set<number>();
-    while (mines.size < mineCount) {
-      mines.add(Math.floor(Math.random() * TOTAL_CELLS));
-    }
-    setMinePositions(mines);
+    // Lazy mine placement: mines are decided on each click, not upfront
+    remainingMinesRef.current = mineCount;
+    revealedSafeRef.current = new Set();
+    setMinePositions(new Set());
     setGrid(Array(TOTAL_CELLS).fill("hidden"));
     setSafePicks(0);
     setCurrentMultiplier(1);
@@ -106,23 +108,65 @@ const MinesGame = () => {
     if (phase !== "playing" || grid[index] !== "hidden") return;
 
     const newGrid = [...grid];
+    const remainingMines = remainingMinesRef.current;
+    const revealedSafe = revealedSafeRef.current;
+    
+    // Calculate remaining hidden cells (excluding already revealed)
+    const hiddenCount = TOTAL_CELLS - revealedSafe.size - minePositions.size;
+    
+    // Lazy mine decision: decide NOW if this cell is a mine
+    // Use boosted probability so users don't always get easy early cashouts
+    // Fair probability would be: remainingMines / hiddenCount
+    // We boost it by ~1.8x-2.5x depending on mine count, capped at 85%
+    let fairProb = remainingMines / hiddenCount;
+    let boostFactor = mineCount <= 1 ? 2.5 : mineCount <= 3 ? 2.0 : 1.5;
+    // Extra boost for first 2 clicks to prevent easy 1.10x/1.20x cashouts
+    if (safePicks < 2) boostFactor *= 1.3;
+    let hitProb = Math.min(fairProb * boostFactor, 0.85);
+    
+    // Guarantee mine if remaining mines >= remaining hidden cells
+    if (remainingMines >= hiddenCount) hitProb = 1;
+    // Guarantee safe if no mines left
+    if (remainingMines <= 0) hitProb = 0;
+    
+    const isMine = Math.random() < hitProb;
 
-    if (minePositions.has(index)) {
-      // Hit a mine - reveal all mines
+    if (isMine && remainingMines > 0) {
+      // Hit a mine
+      remainingMinesRef.current = remainingMines - 1;
+      const updatedMines = new Set(minePositions);
+      updatedMines.add(index);
+      
+      // Place remaining mines randomly on hidden cells for reveal
+      const hiddenCells = [];
+      for (let i = 0; i < TOTAL_CELLS; i++) {
+        if (i !== index && !revealedSafe.has(i) && !updatedMines.has(i) && newGrid[i] === "hidden") {
+          hiddenCells.push(i);
+        }
+      }
+      let leftToPlace = remainingMinesRef.current;
+      for (let i = 0; i < hiddenCells.length && leftToPlace > 0; i++) {
+        const swap = i + Math.floor(Math.random() * (hiddenCells.length - i));
+        [hiddenCells[i], hiddenCells[swap]] = [hiddenCells[swap], hiddenCells[i]];
+        updatedMines.add(hiddenCells[i]);
+        leftToPlace--;
+      }
+      
       newGrid[index] = "mine";
-      minePositions.forEach(pos => {
+      updatedMines.forEach(pos => {
         if (pos !== index) newGrid[pos] = "revealed-mine";
       });
+      setMinePositions(updatedMines);
       setGrid(newGrid);
       setPhase("lost");
       if (soundRef.current) playLoseSound();
       setRound(r => r + 1);
-      // Report loss to backend
       reportGameResult({ betAmount: selectedBet, winAmount: 0, currency: activeWallet, game: "mines" })
         .then(() => { setLocalDollarAdj(0); setLocalStarAdj(0); refreshBalance(); }).catch(console.error);
     } else {
       // Safe pick
       newGrid[index] = "safe";
+      revealedSafeRef.current = new Set([...revealedSafe, index]);
       setGrid(newGrid);
       const newSafePicks = safePicks + 1;
       setSafePicks(newSafePicks);
@@ -134,17 +178,14 @@ const MinesGame = () => {
       if (newSafePicks >= TOTAL_CELLS - mineCount) {
         const prize = Math.floor(selectedBet * mult * 100) / 100;
         setWinAmount(prize);
-        // Win goes to winning pool, not wallet
-
         setPhase("cashed");
         if (soundRef.current) playWinSound();
         setRound(r => r + 1);
-        // Report win to backend
         reportGameResult({ betAmount: selectedBet, winAmount: prize, currency: activeWallet, game: "mines" })
           .then(() => { setLocalDollarAdj(0); setLocalStarAdj(0); refreshBalance(); }).catch(console.error);
       }
     }
-  }, [phase, grid, minePositions, safePicks, mineCount, selectedBet, activeWallet]);
+  }, [phase, grid, minePositions, safePicks, mineCount, selectedBet, activeWallet, refreshBalance]);
 
   const cashOut = useCallback(() => {
     if (phase !== "playing" || safePicks === 0) return;
